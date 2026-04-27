@@ -20,7 +20,14 @@
   "keywords": ["socialrouter", "social-media", "scraping", "api", "sdk", "linkedin", "instagram", "twitter", "x", "reddit"],
   "author": "SocialRouter",
   "license": "MIT",
-  "homepage": "https://socialrouter.io",
+  "homepage": "https://www.socialrouter.io",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/socialrouter/sdk-ts.git"
+  },
+  "bugs": {
+    "url": "https://github.com/socialrouter/sdk-ts/issues"
+  },
   "publishConfig": {
     "access": "public"
   },
