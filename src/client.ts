@@ -31,10 +31,8 @@ export class SocialRouter {
   async extract(options: ExtractOptions): Promise<Extraction> {
     return this.post<Extraction>("/v1/extract", {
       url: options.url,
-      type: options.type,
-      limit: options.limit ?? 100,
       provider: options.provider,
-      webhook_url: options.webhook_url,
+      limit: options.limit ?? 100,
     });
   }
 

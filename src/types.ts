@@ -10,10 +10,13 @@ export type ExtractionStatus = "pending" | "completed" | "failed";
 
 export interface ExtractOptions {
   url: string;
-  type: ExtractionType;
+  /**
+   * Service slug of the form `<provider>/<platform>/<type>`
+   * (e.g. `apify/linkedin/profile.info`). Copy-paste-friendly from the
+   * providers page; fully specifies the routing target.
+   */
+  provider: string;
   limit?: number;
-  provider?: string;
-  webhook_url?: string;
 }
 
 export interface ExtractionRecord {

@@ -19,7 +19,7 @@ const client = new SocialRouter({
 
 const result = await client.extractAndWait({
   url: "https://www.linkedin.com/posts/johndoe_ai-sales-1234567890",
-  model: "lobstr/post.likes",
+  provider: "apify/linkedin/post.likes",
   limit: 100,
 });
 
@@ -28,46 +28,11 @@ for (const person of result.data) {
 }
 ```
 
-## Model Slugs
+## Provider slugs
 
-SocialRouter uses model slugs to specify which provider and extraction type to use, following the same pattern as OpenRouter. A model slug combines the provider and extraction type in a single string:
+The `provider` field is a slug of the form `<provider>/<platform>/<type>` — for example `apify/linkedin/profile.info` or `brightdata/instagram/post.likes`. It fully specifies the routing target: which provider, which platform, which extraction.
 
-```
-provider/extraction_type
-```
-
-### Available Models
-
-| Model | Description |
-|-------|-------------|
-| `lobstr/post.likes` | Post likes via Lobstr |
-| `lobstr/post.comments` | Post comments via Lobstr |
-| `lobstr/profile.info` | Profile info via Lobstr |
-| `lobstr/profile.posts` | Profile posts via Lobstr |
-| `apify/post.likes` | Post likes via Apify |
-| `apify/post.comments` | Post comments via Apify |
-| `apify/profile.info` | Profile info via Apify |
-| `apify/profile.posts` | Profile posts via Apify |
-| `apify/profile.followers` | Followers via Apify |
-
-Browse all models and pricing at [socialrouter.io/providers](https://socialrouter.io/providers).
-
-## Supported Platforms
-
-- **LinkedIn** - profiles, posts, likes, comments, followers
-- **Instagram** - profiles, posts, likes, comments, followers
-- **X (Twitter)** - profiles, posts, likes, comments, followers
-- **Reddit** - profiles, posts, likes, comments, followers
-
-## Extraction Types
-
-| Type | Description |
-|------|-------------|
-| `post.likes` | People who liked/reacted to a post |
-| `post.comments` | People who commented on a post |
-| `profile.info` | Profile metadata (name, bio, company, location) |
-| `profile.posts` | Recent posts from a profile or page |
-| `profile.followers` | Followers of a profile or page |
+Browse the full catalogue (with pricing and copy buttons) at [socialrouter.io/providers](https://www.socialrouter.io/providers).
 
 ## Configuration
 
@@ -87,7 +52,7 @@ The simplest approach. Launches the extraction and polls automatically until the
 ```typescript
 const result = await client.extractAndWait({
   url: "https://www.linkedin.com/posts/johndoe_ai-sales-1234567890",
-  model: "lobstr/post.likes",
+  provider: "apify/linkedin/post.likes",
   limit: 100,
 });
 
@@ -100,7 +65,7 @@ You can customize the polling behavior:
 
 ```typescript
 const result = await client.extractAndWait(
-  { url: "...", model: "lobstr/post.likes" },
+  { url: "...", provider: "apify/linkedin/post.likes" },
   5000,    // Poll every 5 seconds (default: 3000)
   60000,   // Timeout after 60 seconds (default: 120000)
 );
@@ -110,11 +75,9 @@ const result = await client.extractAndWait(
 
 ```typescript
 await client.extract({
-  url: "https://linkedin.com/in/johndoe",  // Social media URL
-  model: "apify/profile.info",             // Model slug (provider/type)
-  limit: 50,                                // Max results (default: 100)
-  cache: true,                              // Enable caching (optional)
-  webhook_url: "https://myapp.com/hook",    // Async callback URL (optional)
+  url: "https://linkedin.com/in/johndoe",      // Social media URL
+  provider: "apify/linkedin/profile.info",     // Service slug (required)
+  limit: 50,                                   // Max results (default: 100)
 });
 ```
 
@@ -125,7 +88,7 @@ If you prefer to manage polling yourself:
 ```typescript
 const extraction = await client.extract({
   url: "https://linkedin.com/posts/...",
-  model: "lobstr/post.likes",
+  provider: "apify/linkedin/post.likes",
 });
 
 console.log(extraction.id); // "ext_abc123"
@@ -183,7 +146,7 @@ import {
 } from "@socialrouter/sdk";
 
 try {
-  await client.extractAndWait({ url: "...", model: "lobstr/post.likes" });
+  await client.extractAndWait({ url: "...", provider: "apify/linkedin/post.likes" });
 } catch (err) {
   if (err instanceof AuthenticationError) {
     // 401 - Invalid or missing API key
