@@ -1,6 +1,6 @@
 # SocialRouter SDK
 
-A unified API to extract data from social media platforms. SocialRouter acts as an abstraction layer over multiple data providers (Lobstr, Apify, PhantomBuster, etc.), offering a single interface, normalized data format, and automatic failover.
+A unified API to extract data from social media platforms. SocialRouter acts as an abstraction layer over multiple data providers (Apify, BrightData, etc.), offering a single interface, normalized data format, and automatic failover.
 
 ## Installation
 
@@ -114,7 +114,7 @@ for (const p of providers) {
 }
 
 // Get provider details including pricing
-const detail = await client.getProvider("lobstr");
+const detail = await client.getProvider("apify");
 console.log(detail.pricing);
 ```
 
