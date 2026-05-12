@@ -1,6 +1,7 @@
 import type {
   SocialRouterConfig,
   ExtractOptions,
+  SearchOptions,
   Extraction,
   ProviderInfo,
   ProviderDetail,
@@ -15,6 +16,7 @@ import {
 } from "./errors.js";
 
 const DEFAULT_BASE_URL = "https://api.socialrouter.io";
+const SDK_VERSION = "0.3.0";
 
 export class SocialRouter {
   private apiKey: string;
@@ -27,13 +29,38 @@ export class SocialRouter {
 
   // ─── Extract ─────────────────────────────────────────
 
-  /** Run a data extraction */
+  /**
+   * Run a URL-driven data extraction. Pass either `url` (single) or `urls`
+   * (batch — only meaningful when the target provider/actor accepts batches).
+   */
   async extract(options: ExtractOptions): Promise<Extraction> {
-    return this.post<Extraction>("/v1/extract", {
-      url: options.url,
+    const body: Record<string, unknown> = {
       provider: options.provider,
-      limit: options.limit ?? 100,
-    });
+    };
+    if (options.urls !== undefined) {
+      body.urls = options.urls;
+    } else if (options.url !== undefined) {
+      body.url = options.url;
+    } else {
+      throw new Error("extract() requires either 'url' or 'urls'.");
+    }
+    if (options.limit !== undefined) body.limit = options.limit;
+    if (options.fallback !== undefined) body.fallback = options.fallback;
+    return this.post<Extraction>("/v1/extract", body);
+  }
+
+  /**
+   * Run a query-driven search. The slug grammar matches `extract`, but the
+   * `type` segment must belong to the SearchType union (e.g. `place.search`).
+   */
+  async search(options: SearchOptions): Promise<Extraction> {
+    const body: Record<string, unknown> = {
+      queries: options.queries,
+      provider: options.provider,
+    };
+    if (options.limit !== undefined) body.limit = options.limit;
+    if (options.fallback !== undefined) body.fallback = options.fallback;
+    return this.post<Extraction>("/v1/search", body);
   }
 
   /** Get extraction by ID (for polling async results) */
@@ -53,7 +80,6 @@ export class SocialRouter {
       return extraction;
     }
 
-    // Poll
     const start = Date.now();
     while (Date.now() - start < timeoutMs) {
       await new Promise((r) => setTimeout(r, pollIntervalMs));
@@ -62,6 +88,28 @@ export class SocialRouter {
     }
 
     throw new Error(`Extraction ${extraction.id} timed out after ${timeoutMs}ms`);
+  }
+
+  /** Run a search and poll until completed (convenience method) */
+  async searchAndWait(
+    options: SearchOptions,
+    pollIntervalMs: number = 3000,
+    timeoutMs: number = 120000
+  ): Promise<Extraction> {
+    const extraction = await this.search(options);
+
+    if (extraction.status === "completed" || extraction.status === "failed") {
+      return extraction;
+    }
+
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      await new Promise((r) => setTimeout(r, pollIntervalMs));
+      const result = await this.getExtraction(extraction.id);
+      if (result.status !== "pending") return result;
+    }
+
+    throw new Error(`Search ${extraction.id} timed out after ${timeoutMs}ms`);
   }
 
   // ─── Providers ───────────────────────────────────────
@@ -107,7 +155,7 @@ export class SocialRouter {
       headers: {
         Authorization: `Bearer ${this.apiKey}`,
         "Content-Type": "application/json",
-        "User-Agent": "socialrouter-sdk/0.1.0",
+        "User-Agent": `socialrouter-sdk/${SDK_VERSION}`,
       },
       ...(body ? { body: JSON.stringify(body) } : {}),
     });

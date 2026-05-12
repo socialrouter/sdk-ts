@@ -1,22 +1,80 @@
+export type Platform =
+  | "linkedin"
+  | "instagram"
+  | "x"
+  | "reddit"
+  | "facebook"
+  | "tiktok"
+  | "youtube"
+  | "pinterest"
+  | "bluesky"
+  | "snapchat"
+  | "googlemaps";
+
 export type ExtractionType =
   | "post.likes"
   | "post.comments"
+  | "post.info"
   | "profile.info"
   | "profile.posts"
-  | "profile.followers";
+  | "profile.reels"
+  | "profile.followers"
+  | "company.info"
+  | "company.reviews"
+  | "group.posts"
+  | "job.listings"
+  | "event.info"
+  | "marketplace.listings"
+  | "video.info"
+  | "channel.info"
+  | "place.info"
+  | "place.reviews";
 
-export type Platform = "linkedin" | "instagram" | "x" | "reddit";
+export type SearchType = "place.search";
+
+export type ServiceType = ExtractionType | SearchType;
+
 export type ExtractionStatus = "pending" | "completed" | "failed";
 
+export type ExtractionKind = "extract" | "search";
+
+export type ProviderStatus = "active" | "degraded" | "down" | "coming_soon";
+
 export interface ExtractOptions {
-  url: string;
   /**
-   * Service slug of the form `<provider>/<platform>/<type>`
-   * (e.g. `apify/linkedin/profile.info`). Copy-paste-friendly from the
-   * providers page; fully specifies the routing target.
+   * Single URL to extract from. Use `urls` for batch-capable providers when
+   * sending more than one URL in a single request.
+   */
+  url?: string;
+  /** Batch form — non-empty array of URLs. Mutually exclusive with `url`. */
+  urls?: string[];
+  /**
+   * Service slug of the form `<provider>/<platform>/<type>[:<tag>]`
+   * (e.g. `apify/linkedin/profile.info` or
+   * `apify/linkedin/profile.posts:apimaestro`). The `:tag` suffix is optional
+   * and selects a specific actor/dataset variant.
    */
   provider: string;
   limit?: number;
+  /**
+   * Whether to fall over to alternative providers if the requested one fails.
+   * Defaults to `true`. Set to `false` to attempt only the requested provider
+   * and surface its error directly.
+   */
+  fallback?: boolean;
+}
+
+export interface SearchOptions {
+  /** Non-empty list of search queries (terms or context-pinning URLs). */
+  queries: string[];
+  /**
+   * Service slug `<provider>/<platform>/<type>[:<tag>]` whose `type` belongs
+   * to the SearchType union (e.g. `apify/googlemaps/place.search:compass`).
+   */
+  provider: string;
+  limit?: number;
+  /** Defaults to `true`. See `ExtractOptions.fallback`. */
+  fallback?: boolean;
 }
 
 export interface ExtractionRecord {
@@ -32,11 +90,19 @@ export interface ExtractionRecord {
 
 export interface Extraction {
   id: string;
+  kind: ExtractionKind;
   status: ExtractionStatus;
   source: Platform;
-  type: ExtractionType;
+  type: ExtractionType | SearchType;
   url: string;
+  /** Populated when `kind === "search"` — the original list of queries. */
+  queries?: string[];
   provider: string;
+  /**
+   * Present only when a fallback was used. Holds the provider that was
+   * initially selected by the router before the chain rolled over.
+   */
+  fallback_from?: string;
   credits_used: number;
   data: ExtractionRecord[];
   pagination: {
@@ -53,14 +119,22 @@ export interface ProviderInfo {
   id: string;
   name: string;
   description: string;
-  status: string;
+  status: ProviderStatus;
   supported_platforms: Platform[];
   supported_types: ExtractionType[];
+  /** Search-style services supported by this provider, if any. */
+  supported_search_types?: SearchType[];
 }
 
 export interface ProviderDetail extends ProviderInfo {
   pricing: {
     type: ExtractionType;
+    platforms: Platform[];
+    price_per_record: number;
+  }[];
+  /** Pricing for search-style services, keyed by SearchType. */
+  search_pricing?: {
+    type: SearchType;
     platforms: Platform[];
     price_per_record: number;
   }[];
