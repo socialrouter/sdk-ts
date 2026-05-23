@@ -18,6 +18,7 @@ export type ExtractionType =
   | "profile.info"
   | "profile.posts"
   | "profile.reels"
+  | "profile.shorts"
   | "profile.followers"
   | "company.info"
   | "company.reviews"
@@ -26,11 +27,14 @@ export type ExtractionType =
   | "event.info"
   | "marketplace.listings"
   | "video.info"
+  | "video.transcript"
   | "channel.info"
+  | "playlist.posts"
+  | "hashtag.posts"
   | "place.info"
   | "place.reviews";
 
-export type SearchType = "place.search";
+export type SearchType = "place.search" | "video.search";
 
 export type ServiceType = ExtractionType | SearchType;
 
@@ -62,6 +66,13 @@ export interface ExtractOptions {
    * and surface its error directly.
    */
   fallback?: boolean;
+  /**
+   * Per-actor input overrides. Plain JSON object — each actor decides which
+   * keys it honors via its `buildInput` allowlist (unknown keys are dropped
+   * server-side). Use this for actor-specific knobs that don't have a
+   * first-class slot in the request body (e.g. `proxyCountry`, `language`).
+   */
+  options?: Record<string, unknown>;
 }
 
 export interface SearchOptions {
@@ -75,6 +86,8 @@ export interface SearchOptions {
   limit?: number;
   /** Defaults to `true`. See `ExtractOptions.fallback`. */
   fallback?: boolean;
+  /** Per-actor input overrides. See `ExtractOptions.options`. */
+  options?: Record<string, unknown>;
 }
 
 export interface ExtractionRecord {

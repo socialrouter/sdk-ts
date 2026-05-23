@@ -46,6 +46,7 @@ export class SocialRouter {
     }
     if (options.limit !== undefined) body.limit = options.limit;
     if (options.fallback !== undefined) body.fallback = options.fallback;
+    if (options.options !== undefined) body.options = options.options;
     return this.post<Extraction>("/v1/extract", body);
   }
 
@@ -60,6 +61,7 @@ export class SocialRouter {
     };
     if (options.limit !== undefined) body.limit = options.limit;
     if (options.fallback !== undefined) body.fallback = options.fallback;
+    if (options.options !== undefined) body.options = options.options;
     return this.post<Extraction>("/v1/search", body);
   }
 
