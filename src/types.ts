@@ -173,7 +173,22 @@ export interface ApiErrorDetail {
   type: string;
 }
 
+/**
+ * Which SocialRouter surface issued the request. Sent on every call via the
+ * `X-SocialRouter-Client` header so the API can attribute usage per channel.
+ * Wrappers set this explicitly (CLI → "cli", MCP → "mcp"); a bare SDK caller
+ * defaults to "sdk". A raw HTTP caller sends no header and the API records it
+ * as "api".
+ */
+export type SourceClient = "sdk" | "cli" | "mcp" | "playground";
+
 export interface SocialRouterConfig {
   apiKey: string;
   baseUrl?: string;
+  /**
+   * Identifies the calling surface for usage attribution. Defaults to "sdk".
+   * The CLI and MCP server override this so requests can be traced to the
+   * channel they came from.
+   */
+  client?: SourceClient;
 }

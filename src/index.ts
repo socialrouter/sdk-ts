@@ -7,6 +7,7 @@ export {
 } from "./errors.js";
 export type {
   SocialRouterConfig,
+  SourceClient,
   ExtractOptions,
   SearchOptions,
   Extraction,

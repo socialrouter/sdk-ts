@@ -1,5 +1,6 @@
 import type {
   SocialRouterConfig,
+  SourceClient,
   ExtractOptions,
   SearchOptions,
   Extraction,
@@ -21,10 +22,12 @@ const SDK_VERSION = "0.3.0";
 export class SocialRouter {
   private apiKey: string;
   private baseUrl: string;
+  private client: SourceClient;
 
   constructor(config: SocialRouterConfig) {
     this.apiKey = config.apiKey;
     this.baseUrl = (config.baseUrl ?? DEFAULT_BASE_URL).replace(/\/$/, "");
+    this.client = config.client ?? "sdk";
   }
 
   // ─── Extract ─────────────────────────────────────────
@@ -158,6 +161,7 @@ export class SocialRouter {
         Authorization: `Bearer ${this.apiKey}`,
         "Content-Type": "application/json",
         "User-Agent": `socialrouter-sdk/${SDK_VERSION}`,
+        "X-SocialRouter-Client": this.client,
       },
       ...(body ? { body: JSON.stringify(body) } : {}),
     });
