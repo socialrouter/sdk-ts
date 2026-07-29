@@ -123,7 +123,6 @@ export interface Extraction {
   pagination: {
     total: number;
     returned: number;
-    next_cursor: string | null;
   };
   error?: ApiErrorDetail;
   created_at: string;
