@@ -70,7 +70,9 @@ export interface ExtractOptions {
    * Per-actor input overrides. Plain JSON object — each actor decides which
    * keys it honors via its `buildInput` allowlist (unknown keys are dropped
    * server-side). Use this for actor-specific knobs that don't have a
-   * first-class slot in the request body (e.g. `proxyCountry`, `language`).
+   * first-class slot in the request body (e.g. `{ includeEmail: false }` on
+   * `apify/linkedin/profile.info`). The catalogue does not advertise which
+   * keys an actor accepts — only pass keys documented for that actor.
    */
   options?: Record<string, unknown>;
 }

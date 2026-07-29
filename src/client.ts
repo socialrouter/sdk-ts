@@ -28,6 +28,14 @@ export class SocialRouter {
     this.apiKey = config.apiKey;
     this.baseUrl = (config.baseUrl ?? DEFAULT_BASE_URL).replace(/\/$/, "");
     this.client = config.client ?? "sdk";
+
+    // The API key travels in the Authorization header on every request — warn
+    // loudly if the base URL is plaintext HTTP, which would send it in clear.
+    if (this.baseUrl.startsWith("http://")) {
+      console.warn(
+        "[socialrouter] baseUrl uses http:// — your API key will be sent unencrypted. Use https:// unless this is a local dev server.",
+      );
+    }
   }
 
   // ─── Extract ─────────────────────────────────────────
@@ -70,7 +78,9 @@ export class SocialRouter {
 
   /** Get extraction by ID (for polling async results) */
   async getExtraction(id: string): Promise<Extraction> {
-    return this.get<Extraction>(`/v1/extract/${id}`);
+    // Encode the id — it's interpolated into the path, so a caller-supplied
+    // value containing "/" or "?" must not alter the request target.
+    return this.get<Extraction>(`/v1/extract/${encodeURIComponent(id)}`);
   }
 
   /** Extract and poll until completed (convenience method) */
