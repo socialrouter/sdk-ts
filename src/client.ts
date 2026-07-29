@@ -17,7 +17,7 @@ import {
 } from "./errors.js";
 
 const DEFAULT_BASE_URL = "https://api.socialrouter.io";
-const SDK_VERSION = "0.3.2";
+const SDK_VERSION = "0.3.3";
 
 export class SocialRouter {
   private apiKey: string;
