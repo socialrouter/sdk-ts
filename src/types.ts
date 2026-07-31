@@ -1,121 +1,94 @@
-export type Platform =
-  | "linkedin"
-  | "instagram"
-  | "x"
-  | "reddit"
-  | "facebook"
-  | "tiktok"
-  | "youtube"
-  | "pinterest"
-  | "bluesky"
-  | "snapchat"
-  | "googlemaps";
+import type {
+  InputKindOf,
+  Platform,
+  ServiceName,
+  ServiceOptionsMap,
+  ServiceSlug,
+} from "./services.generated.js";
 
-export type ExtractionType =
-  | "post.likes"
-  | "post.comments"
-  | "post.info"
-  | "profile.info"
-  | "profile.posts"
-  | "profile.reels"
-  | "profile.shorts"
-  | "profile.followers"
-  | "company.info"
-  | "company.reviews"
-  | "group.posts"
-  | "job.listings"
-  | "event.info"
-  | "marketplace.listings"
-  | "video.info"
-  | "video.transcript"
-  | "channel.info"
-  | "playlist.posts"
-  | "hashtag.posts"
-  | "place.info"
-  | "place.reviews";
-
-export type SearchType = "place.search" | "video.search";
-
-export type ServiceType = ExtractionType | SearchType;
+export type {
+  Platform,
+  ServiceName,
+  ServiceSlug,
+  ServiceOptionsMap,
+} from "./services.generated.js";
 
 export type ExtractionStatus = "pending" | "completed" | "failed";
 
-export type ExtractionKind = "extract" | "search";
+/** What a service consumes: a URL per record, or a free-text query. */
+export type InputKind = "url" | "query";
 
-export type ProviderStatus = "active" | "degraded" | "down" | "coming_soon";
+/**
+ * A public offer id: `source/name`, e.g. `"apify/harshmaur"` or
+ * `"brightdata/reddit"`. Which offers serve a service is a live property of
+ * the catalogue (`listServices()`), not of this SDK release — the shape is
+ * typed, the set is not.
+ */
+export type OfferId = `${string}/${string}`;
 
-export interface ExtractOptions {
+// ─── Running a service ───────────────────────────────────
+
+/** Fields every run accepts, whatever the service. */
+export interface RunCommon<S extends ServiceSlug = ServiceSlug> {
   /**
-   * Single URL to extract from. Use `urls` for batch-capable providers when
-   * sending more than one URL in a single request.
+   * Pin one offer, e.g. `"apify/harshmaur"`. Omit it — the default — to let
+   * the router pick and fail over across the whole chain. Pinning disables
+   * failover: the run succeeds or fails on that offer alone.
    */
+  provider?: OfferId;
+  /** Max records to return, 1..250. Defaults to 100. */
+  limit?: number;
+  /**
+   * Typed options declared by the service. Unknown keys are rejected by the
+   * API with a corrective 400 — they are not silently dropped.
+   */
+  options?: ServiceOptionsMap[S];
+}
+
+/** Inputs of a url-kind service. Pass `url` or `urls`, not both. */
+export interface UrlInput {
   url?: string;
-  /** Batch form — non-empty array of URLs. Mutually exclusive with `url`. */
   urls?: string[];
-  /**
-   * Service slug of the form `<provider>/<platform>/<type>[:<tag>]`
-   * (e.g. `apify/linkedin/profile.info` or
-   * `apify/linkedin/profile.posts:apimaestro`). The `:tag` suffix is optional
-   * and selects a specific actor/dataset variant.
-   */
-  provider: string;
-  limit?: number;
-  /**
-   * Whether to fall over to alternative providers if the requested one fails.
-   * Defaults to `true`. Set to `false` to attempt only the requested provider
-   * and surface its error directly.
-   */
-  fallback?: boolean;
-  /**
-   * Per-actor input overrides. Plain JSON object — each actor decides which
-   * keys it honors via its `buildInput` allowlist (unknown keys are dropped
-   * server-side). Use this for actor-specific knobs that don't have a
-   * first-class slot in the request body (e.g. `{ includeEmail: false }` on
-   * `apify/linkedin/profile.info`). The catalogue does not advertise which
-   * keys an actor accepts — only pass keys documented for that actor.
-   */
-  options?: Record<string, unknown>;
 }
 
-export interface SearchOptions {
-  /** Non-empty list of search queries (terms or context-pinning URLs). */
-  queries: string[];
-  /**
-   * Service slug `<provider>/<platform>/<type>[:<tag>]` whose `type` belongs
-   * to the SearchType union (e.g. `apify/googlemaps/place.search:compass`).
-   */
-  provider: string;
-  limit?: number;
-  /** Defaults to `true`. See `ExtractOptions.fallback`. */
-  fallback?: boolean;
-  /** Per-actor input overrides. See `ExtractOptions.options`. */
-  options?: Record<string, unknown>;
+/** Inputs of a query-kind service. Pass `query` or `queries`, not both. */
+export interface QueryInput {
+  query?: string;
+  queries?: string[];
 }
+
+/**
+ * The body of `run(service, input)`, correlated with the service: a url-kind
+ * service takes `url`/`urls`, a query-kind one takes `query`/`queries`, and
+ * `options` is the option set that service declares.
+ */
+export type RunInput<S extends ServiceSlug> = RunCommon<S> &
+  (InputKindOf<S> extends "query" ? QueryInput : UrlInput);
+
+// ─── Results ─────────────────────────────────────────────
 
 export interface ExtractionRecord {
-  name: string;
-  title?: string;
-  company?: string;
-  location?: string;
-  profile_url: string;
-  source: Platform;
-  extracted_at: string;
   [key: string]: unknown;
 }
 
+/** A service run — the result of `run()` or `getExtraction()`. */
 export interface Extraction {
   id: string;
-  kind: ExtractionKind;
   status: ExtractionStatus;
-  source: Platform;
-  type: ExtractionType | SearchType;
+  platform: Platform;
+  service: ServiceName;
+  /** The primary input (first URL or query). */
   url: string;
-  /** Populated when `kind === "search"` — the original list of queries. */
+  /** Populated for query-kind services — the original list of queries. */
   queries?: string[];
-  provider: string;
   /**
-   * Present only when a fallback was used. Holds the provider that was
-   * initially selected by the router before the chain rolled over.
+   * The offer that actually served the run, e.g. `"apify/harshmaur"` — the
+   * failover made visible. Null when no offer succeeded.
+   */
+  served_by: string | null;
+  /**
+   * Set only when the chain rolled over: the offer that was tried first.
+   * `served_by` then holds the one that answered.
    */
   fallback_from?: string;
   credits_used: number;
@@ -129,30 +102,71 @@ export interface Extraction {
   completed_at: string | null;
 }
 
-export interface ProviderInfo {
+// ─── Catalogue ───────────────────────────────────────────
+
+/** One accepted input shape of a service. */
+export interface InputFormat {
+  /** Canonical shape, e.g. `"https://www.linkedin.com/in/<handle>"`. */
+  format: string;
+  /** A concrete valid input. */
+  example: string;
+  /** Validation regex source — informational; the API validates. */
+  pattern?: string;
+  note?: string;
+}
+
+/** One typed option a service accepts. */
+export interface ServiceOption {
+  name: string;
+  type: "string" | "number" | "boolean" | "enum";
+  /** Allowed values, for `enum`. */
+  values?: string[];
+  /** Value shape hint for `string`, e.g. `"YYYY-MM-DD"`. */
+  format?: string;
+  description: string;
+  default?: string | number | boolean;
+}
+
+/** One offer of a service, customer-facing. */
+export interface CatalogueOffer {
+  /** Public offer id, e.g. `"apify/harshmaur"`. */
+  offer: string;
+  /** The source half of the offer id, e.g. `"apify"`. */
+  source: string;
+  price_per_record: number;
+  /** Max inputs (URLs or queries) accepted per request. */
+  max_inputs: number;
+}
+
+/** One (platform, service) entry of the catalogue, as `GET /v1/services`. */
+export interface CatalogueService {
+  platform: Platform;
+  service: ServiceName;
+  /** The endpoint that runs this service. */
+  endpoint: string;
+  input_kind: InputKind;
+  /** Name of the request body field carrying the inputs. */
+  input_field: "urls" | "queries";
+  accepts: InputFormat[];
+  options: ServiceOption[];
+  /** Offers in failover order — the head serves unless one is pinned. */
+  offers: CatalogueOffer[];
+}
+
+export type SourceStatus = "active" | "degraded" | "down" | "coming_soon";
+
+/** A data source, as `GET /v1/providers` — the "our sources" view. */
+export interface SourceInfo {
   id: string;
   name: string;
   description: string;
-  status: ProviderStatus;
-  supported_platforms: Platform[];
-  supported_types: ExtractionType[];
-  /** Search-style services supported by this provider, if any. */
-  supported_search_types?: SearchType[];
+  status: SourceStatus;
+  platforms: Platform[];
+  services_count: number;
+  offers_count: number;
 }
 
-export interface ProviderDetail extends ProviderInfo {
-  pricing: {
-    type: ExtractionType;
-    platforms: Platform[];
-    price_per_record: number;
-  }[];
-  /** Pricing for search-style services, keyed by SearchType. */
-  search_pricing?: {
-    type: SearchType;
-    platforms: Platform[];
-    price_per_record: number;
-  }[];
-}
+// ─── Account ─────────────────────────────────────────────
 
 export interface AccountBalance {
   balance: number;
@@ -164,6 +178,7 @@ export interface UsageSummary {
   total_requests: number;
   total_records: number;
   total_credits: number;
+  /** Keyed by offer id, e.g. `"apify/harshmaur"`. */
   by_provider: Record<string, { requests: number; records: number; credits: number }>;
   by_platform: Record<string, { requests: number; records: number; credits: number }>;
 }

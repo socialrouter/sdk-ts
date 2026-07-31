@@ -18,6 +18,7 @@
   ],
   "scripts": {
     "build": "tsc",
+    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
     "dev": "tsc --watch",
     "prepublishOnly": "npm run build"
   },
