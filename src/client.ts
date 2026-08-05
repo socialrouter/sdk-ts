@@ -113,7 +113,7 @@ export class SocialRouter {
     if (src.limit !== undefined) body.limit = src.limit;
     if (src.options !== undefined) body.options = src.options;
 
-    return this.post<Extraction>(`/v1/${servicePath(service)}`, body);
+    return this.post<Extraction>(`/v1/extract/${servicePath(service)}`, body);
   }
 
   /** Get a past run by ID. */
@@ -217,6 +217,13 @@ export class SocialRouter {
 }
 
 /** "reddit/subreddit.posts" → "reddit/subreddit.posts", each segment encoded. */
+/**
+ * Turn a service slug into the path segments under `/v1/extract`.
+ *
+ * The slug ("linkedin/profile.info") is the service's name everywhere — in
+ * logs, in the CLI, in `served_by`. The `extract` namespace lives in the URL
+ * only, and is added by the caller above; it is never part of the slug.
+ */
 function servicePath(service: string): string {
   return service.split("/").map(encodeURIComponent).join("/");
 }

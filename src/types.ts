@@ -91,6 +91,15 @@ export interface Extraction {
    * `served_by` then holds the one that answered.
    */
   fallback_from?: string;
+  /**
+   * Which provider account the run was placed on: `"platform"`
+   * (SocialRouter's, paid in credits) or `"own"` (a key you registered on
+   * your account, invoiced to you by the provider directly).
+   *
+   * A failover chain can mix the two, so `served_by` alone does not answer
+   * it. Present on every completed run.
+   */
+  billed_as?: "platform" | "own";
   credits_used: number;
   data: ExtractionRecord[];
   pagination: {
@@ -133,9 +142,21 @@ export interface CatalogueOffer {
   offer: string;
   /** The source half of the offer id, e.g. `"apify"`. */
   source: string;
+  /**
+   * What SocialRouter bills per record. Zero when `requires_own_key` is
+   * true: the records are collected on your own provider account and
+   * invoiced there, so there is nothing for us to resell.
+   */
   price_per_record: number;
   /** Max inputs (URLs or queries) accepted per request. */
   max_inputs: number;
+  /**
+   * True when SocialRouter holds no account for this source, so the offer
+   * only runs on a provider key you registered yourself. Stated on every
+   * offer, not just the ones needing a key, so it never has to be inferred
+   * from an absent field.
+   */
+  requires_own_key: boolean;
 }
 
 /** One (platform, service) entry of the catalogue, as `GET /v1/services`. */
