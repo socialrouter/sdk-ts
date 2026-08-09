@@ -1,0 +1,16 @@
+{
+  // The root config builds `src` into `dist`, so the tests belonged to no
+  // project: editors reported them as unlisted and fell back to inferred
+  // options. `npm run typecheck` covers the same files through
+  // tsconfig.typecheck.json; this config is what makes an editor agree with
+  // it.
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": "..",
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false
+  },
+  "include": ["."]
+}
