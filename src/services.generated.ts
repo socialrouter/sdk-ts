@@ -1,12 +1,12 @@
 // ─── GENERATED FILE — DO NOT EDIT ────────────────────────
 //
-// Source of truth: @socialrouter/core (PLATFORM_SERVICES + input specs).
-// Regenerate with `npm run gen:sdk` from packages/core.
+// Source of truth: @socialrouter/core (PLATFORM_SERVICES, ENTITY_SERVICES
+// + input specs). Regenerate with `npm run gen:sdk` from packages/core.
 //
 // Only services served by at least one offer are listed: calling one
 // that isn't would type-check here and 404 at the API.
 
-/** Every callable service, by platform. */
+/** Every callable extraction service, by platform. */
 export const PLATFORM_SERVICES = {
   bluesky: [
     "post.info",
@@ -36,6 +36,7 @@ export const PLATFORM_SERVICES = {
   linkedin: [
     "company.info",
     "job.info",
+    "post.info",
     "post.likes",
     "post.search",
     "profile.info",
@@ -76,22 +77,116 @@ export const PLATFORM_SERVICES = {
   ],
 } as const;
 
+/** Every callable enrichment service, by entity. */
+export const ENTITY_SERVICES = {
+  company: [
+    "info",
+    "search",
+  ],
+  person: [
+    "info",
+    "search",
+  ],
+} as const;
+
 export type Platform = keyof typeof PLATFORM_SERVICES;
+export type Entity = keyof typeof ENTITY_SERVICES;
+
+/** The left key of a service slug: a platform, or an enrichment entity. */
+export type Subject = Platform | Entity;
 
 export const PLATFORMS = Object.keys(PLATFORM_SERVICES) as Platform[];
+export const ENTITIES = Object.keys(ENTITY_SERVICES) as Entity[];
+export const SUBJECTS: Subject[] = [...PLATFORMS, ...ENTITIES];
 
-/** Service names valid on a given platform (or across all platforms). */
-export type ServiceName<P extends Platform = Platform> =
-  (typeof PLATFORM_SERVICES)[P][number];
+/**
+ * Service names valid on a given subject (or across all subjects).
+ *
+ * Conditional rather than one indexed access: the two vocabularies live
+ * in separate consts, so `ServiceName<"linkedin">` resolves against
+ * PLATFORM_SERVICES and `ServiceName<"person">` against ENTITY_SERVICES.
+ */
+export type ServiceName<S extends Subject = Subject> = S extends Platform
+  ? (typeof PLATFORM_SERVICES)[S][number]
+  : S extends Entity
+    ? (typeof ENTITY_SERVICES)[S][number]
+    : never;
 
-/** A service, as passed to `run()`: "reddit/subreddit.posts". */
+/** A service, as passed to `run()`: "reddit/subreddit.posts", "person/info". */
 export type ServiceSlug = {
-  [P in Platform]: `${P}/${ServiceName<P>}`;
-}[Platform];
+  [S in Subject]: `${S}/${ServiceName<S>}`;
+}[Subject];
 
-/** What each service consumes: a URL per record, or a free-text query. */
+/** The API namespace a service is called under. */
+export type Namespace = "extract" | "enrich";
+
+/**
+ * The namespace of every callable service.
+ *
+ * The SDK builds request paths from this map rather than a hardcoded
+ * prefix. It used to hardcode `/v1/extract/`, which made every
+ * enrichment service silently uncallable.
+ */
+export const SERVICE_NAMESPACE = {
+  "bluesky/post.info": "extract",
+  "company/info": "enrich",
+  "company/search": "enrich",
+  "facebook/event.info": "extract",
+  "facebook/group.posts": "extract",
+  "facebook/marketplace.listings": "extract",
+  "facebook/page.reviews": "extract",
+  "facebook/post.comments": "extract",
+  "facebook/post.info": "extract",
+  "facebook/profile.info": "extract",
+  "facebook/profile.posts": "extract",
+  "facebook/profile.reels": "extract",
+  "googlemaps/place.info": "extract",
+  "googlemaps/place.reviews": "extract",
+  "googlemaps/place.search": "extract",
+  "instagram/post.comments": "extract",
+  "instagram/post.info": "extract",
+  "instagram/profile.info": "extract",
+  "instagram/reel.info": "extract",
+  "linkedin/company.info": "extract",
+  "linkedin/job.info": "extract",
+  "linkedin/post.info": "extract",
+  "linkedin/post.likes": "extract",
+  "linkedin/post.search": "extract",
+  "linkedin/profile.info": "extract",
+  "linkedin/profile.posts": "extract",
+  "person/info": "enrich",
+  "person/search": "enrich",
+  "pinterest/pin.info": "extract",
+  "pinterest/profile.info": "extract",
+  "reddit/post.comments": "extract",
+  "reddit/post.info": "extract",
+  "reddit/subreddit.posts": "extract",
+  "snapchat/post.info": "extract",
+  "snapchat/profile.info": "extract",
+  "tiktok/profile.info": "extract",
+  "tiktok/video.comments": "extract",
+  "tiktok/video.info": "extract",
+  "x/post.info": "extract",
+  "x/profile.info": "extract",
+  "youtube/channel.info": "extract",
+  "youtube/channel.shorts": "extract",
+  "youtube/channel.videos": "extract",
+  "youtube/hashtag.videos": "extract",
+  "youtube/playlist.videos": "extract",
+  "youtube/video.comments": "extract",
+  "youtube/video.info": "extract",
+  "youtube/video.search": "extract",
+  "youtube/video.transcript": "extract",
+} as const satisfies Record<ServiceSlug, Namespace>;
+
+/**
+ * What each service consumes: a URL per record, a free-text query, or an
+ * identifier of the entity (an email, a domain, a profile URL, an id).
+ */
 export const SERVICE_INPUT_KIND = {
   "bluesky/post.info": "url",
+  "company/info": "identifier",
+  "company/search": "query",
   "facebook/event.info": "url",
   "facebook/group.posts": "url",
   "facebook/marketplace.listings": "url",
@@ -110,10 +205,13 @@ export const SERVICE_INPUT_KIND = {
   "instagram/reel.info": "url",
   "linkedin/company.info": "url",
   "linkedin/job.info": "url",
+  "linkedin/post.info": "url",
   "linkedin/post.likes": "url",
   "linkedin/post.search": "query",
   "linkedin/profile.info": "url",
   "linkedin/profile.posts": "url",
+  "person/info": "identifier",
+  "person/search": "query",
   "pinterest/pin.info": "url",
   "pinterest/profile.info": "url",
   "reddit/post.comments": "url",
@@ -135,17 +233,22 @@ export const SERVICE_INPUT_KIND = {
   "youtube/video.info": "url",
   "youtube/video.search": "query",
   "youtube/video.transcript": "url",
-} as const satisfies Record<ServiceSlug, "url" | "query">;
+} as const satisfies Record<ServiceSlug, "url" | "query" | "identifier">;
 
 export type InputKindOf<S extends ServiceSlug> = (typeof SERVICE_INPUT_KIND)[S];
 
 /**
- * Method name per service, for the typed per-platform accessors:
- * `sr.reddit.subredditPosts(...)` runs "reddit/subreddit.posts".
+ * Method name per service, for the typed per-subject accessors:
+ * `sr.reddit.subredditPosts(...)` runs "reddit/subreddit.posts", and
+ * `sr.person.info(...)` runs "person/info".
  */
 export const SERVICE_METHODS = {
   bluesky: {
     postInfo: "post.info",
+  },
+  company: {
+    info: "info",
+    search: "search",
   },
   facebook: {
     eventInfo: "event.info",
@@ -172,10 +275,15 @@ export const SERVICE_METHODS = {
   linkedin: {
     companyInfo: "company.info",
     jobInfo: "job.info",
+    postInfo: "post.info",
     postLikes: "post.likes",
     postSearch: "post.search",
     profileInfo: "profile.info",
     profilePosts: "profile.posts",
+  },
+  person: {
+    info: "info",
+    search: "search",
   },
   pinterest: {
     pinInfo: "pin.info",
@@ -214,10 +322,56 @@ export const SERVICE_METHODS = {
 
 // ─── Typed options, per service ──────────────────────────
 
+/** Options accepted by `company/search`. */
+export interface CompanySearchOptions {
+  /** What the query matches: the company's industry/keyword tags (default, e.g. "fintech"), or its name. */
+  match?: "keywords" | "name";
+  /** Comma-separated headquarters locations. */
+  locations?: string;
+  /** Comma-separated headquarters locations to exclude. */
+  excludeLocations?: string;
+  /** Headcount range, e.g. "51,200". Format: min,max. */
+  employeeRange?: string;
+  /** Comma-separated technologies the company uses, e.g. "salesforce, hubspot". */
+  technologies?: string;
+  /** Minimum annual revenue, in USD. */
+  revenueMin?: number;
+  /** Maximum annual revenue, in USD. */
+  revenueMax?: number;
+}
+
 /** Options accepted by `linkedin/profile.info`. */
 export interface LinkedinProfileInfoOptions {
-  /** Include the public email lookup when the offer supports it. Default: true. */
+  /** Include the public email lookup. Default: true. */
   includeEmail?: boolean;
+}
+
+/** Options accepted by `person/info`. */
+export interface PersonInfoOptions {
+  /** Also return personal email addresses. Consumes extra credits on your own provider account. Default: false. */
+  revealPersonalEmails?: boolean;
+}
+
+/** Options accepted by `person/search`. */
+export interface PersonSearchOptions {
+  /** Comma-separated job titles. Similar titles are matched too, e.g. "head of growth, growth lead". */
+  titles?: string;
+  /** Comma-separated seniority levels: owner, founder, c_suite, partner, vp, head, director, manager, senior, entry, intern. */
+  seniorities?: string;
+  /** Comma-separated locations the person lives in, e.g. "Paris, London". */
+  locations?: string;
+  /** Comma-separated locations of the employer's headquarters. */
+  companyLocations?: string;
+  /** Comma-separated employer domains, e.g. "stripe.com, figma.com". */
+  companyDomains?: string;
+  /** Employer headcount range, e.g. "11,50". Format: min,max. */
+  employeeRange?: string;
+  /** Only people whose work email has this status. */
+  emailStatus?: "verified" | "unverified" | "likely_to_engage" | "unavailable";
+  /** Resolve each hit into a full profile, which is the only way to obtain a LinkedIn URL and an unmasked name. Consumes 1 credit per person matched on your own provider account. Set false for a credit-free preview: masked last names, no LinkedIn URL, is_obfuscated: true on every record. Default: true. */
+  enrich?: boolean;
+  /** Also return personal email addresses. Consumes extra credits on your own provider account. Default: false. */
+  revealPersonalEmails?: boolean;
 }
 
 /** Options accepted by `reddit/subreddit.posts`. */
@@ -226,9 +380,9 @@ export interface RedditSubredditPostsOptions {
   sort?: "hot" | "new" | "top" | "rising";
   /** Time window, applied when sort is "top". */
   time?: "hour" | "day" | "week" | "month" | "year" | "all";
-  /** Only posts created on/after this UTC date (offer-dependent). Format: YYYY-MM-DD. */
+  /** Only posts created on/after this UTC date. Format: YYYY-MM-DD. */
   postedAfter?: string;
-  /** Only posts created before this UTC date (offer-dependent). Format: YYYY-MM-DD. */
+  /** Only posts created before this UTC date. Format: YYYY-MM-DD. */
   postedBefore?: string;
 }
 
@@ -276,7 +430,7 @@ export interface YoutubeHashtagVideosOptions {
 
 /** Options accepted by `youtube/video.info`. */
 export interface YoutubeVideoInfoOptions {
-  /** Also fetch the video's subtitles (offer-dependent). Default: false. */
+  /** Also fetch the video's subtitles. Default: false. */
   downloadSubtitles?: boolean;
   /** Subtitle language code, e.g. "en". */
   subtitlesLanguage?: string;
@@ -325,6 +479,8 @@ export interface YoutubeVideoSearchOptions {
  */
 export interface ServiceOptionsMap {
   "bluesky/post.info": Record<string, never>;
+  "company/info": Record<string, never>;
+  "company/search": CompanySearchOptions;
   "facebook/event.info": Record<string, never>;
   "facebook/group.posts": Record<string, never>;
   "facebook/marketplace.listings": Record<string, never>;
@@ -343,10 +499,13 @@ export interface ServiceOptionsMap {
   "instagram/reel.info": Record<string, never>;
   "linkedin/company.info": Record<string, never>;
   "linkedin/job.info": Record<string, never>;
+  "linkedin/post.info": Record<string, never>;
   "linkedin/post.likes": Record<string, never>;
   "linkedin/post.search": Record<string, never>;
   "linkedin/profile.info": LinkedinProfileInfoOptions;
   "linkedin/profile.posts": Record<string, never>;
+  "person/info": PersonInfoOptions;
+  "person/search": PersonSearchOptions;
   "pinterest/pin.info": Record<string, never>;
   "pinterest/profile.info": Record<string, never>;
   "reddit/post.comments": Record<string, never>;

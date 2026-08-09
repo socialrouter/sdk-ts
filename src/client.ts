@@ -10,10 +10,11 @@ import type {
   UsageSummary,
 } from "./types.js";
 import {
-  PLATFORMS,
   SERVICE_METHODS,
-  type Platform,
+  SERVICE_NAMESPACE,
+  SUBJECTS,
   type ServiceSlug,
+  type Subject,
 } from "./services.generated.js";
 import {
   SocialRouterError,
@@ -21,28 +22,41 @@ import {
   InsufficientCreditsError,
   RateLimitError,
 } from "./errors.js";
+import { readFileSync } from "node:fs";
 
 const DEFAULT_BASE_URL = "https://api.socialrouter.io";
-const SDK_VERSION = "0.4.0";
+/**
+ * Read from package.json rather than hardcoded, so `npm version` is the only
+ * place a release touches. Resolves to the package root from dist/index.js,
+ * and npm always ships package.json in the tarball.
+ */
+const SDK_VERSION = (
+  JSON.parse(
+    readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+  ) as { version: string }
+).version;
 
 type MethodMap = typeof SERVICE_METHODS;
 
-type SlugOf<P extends Platform, M extends keyof MethodMap[P]> =
-  `${P}/${Extract<MethodMap[P][M], string>}`;
+type SlugOf<S extends Subject, M extends keyof MethodMap[S]> =
+  `${S}/${Extract<MethodMap[S][M], string>}`;
 
-/** The typed methods of one platform: `sr.reddit.subredditPosts(...)`. */
-export type PlatformClient<P extends Platform> = {
-  [M in keyof MethodMap[P]]: (
-    input: SlugOf<P, M> extends ServiceSlug ? RunInput<SlugOf<P, M>> : never,
+/**
+ * The typed methods of one subject: `sr.reddit.subredditPosts(...)` on a
+ * platform, `sr.person.info(...)` on an enrichment entity.
+ */
+export type PlatformClient<S extends Subject> = {
+  [M in keyof MethodMap[S]]: (
+    input: SlugOf<S, M> extends ServiceSlug ? RunInput<SlugOf<S, M>> : never,
   ) => Promise<Extraction>;
 };
 
-/** One namespace per platform, hung off the client. */
-export type TypedServices = { [P in Platform]: PlatformClient<P> };
+/** One accessor per subject, hung off the client. */
+export type TypedServices = { [S in Subject]: PlatformClient<S> };
 
-// Declaration merging: the per-platform namespaces are built at runtime from
+// Declaration merging: the per-subject accessors are built at runtime from
 // the generated method map, so they are declared here rather than as class
-// fields — adding a platform in core needs no edit to this file.
+// fields — adding a subject in core needs no edit to this file.
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface SocialRouter extends TypedServices {}
 
@@ -64,23 +78,24 @@ export class SocialRouter {
       );
     }
 
-    for (const platform of PLATFORMS) {
+    for (const subject of SUBJECTS) {
       const methods: Record<string, unknown> = {};
-      for (const [method, service] of Object.entries(SERVICE_METHODS[platform])) {
+      for (const [method, service] of Object.entries(SERVICE_METHODS[subject])) {
         methods[method] = (input: Record<string, unknown>) =>
-          this.run(`${platform}/${service}` as ServiceSlug, input as never);
+          this.run(`${subject}/${service}` as ServiceSlug, input as never);
       }
-      (this as unknown as Record<string, unknown>)[platform] = methods;
+      (this as unknown as Record<string, unknown>)[subject] = methods;
     }
   }
 
   // ─── Run ─────────────────────────────────────────────
 
   /**
-   * Run a service: `run("reddit/subreddit.posts", { url: "..." })`.
+   * Run a service: `run("reddit/subreddit.posts", { url: "..." })`, or
+   * `run("person/info", { identifiers: ["ada@example.com"] })`.
    *
    * One endpoint per service — the input field follows the service's kind
-   * (`url`/`urls` for URL services, `query`/`queries` for query ones) and
+   * (`url`/`urls`, `query`/`queries`, `identifier`/`identifiers`) and
    * `options` is the set that service declares; both are enforced at compile
    * time. Omit `provider` to let the router pick and fail over; pin an offer
    * id to run that offer alone.
@@ -94,6 +109,8 @@ export class SocialRouter {
       urls?: string[];
       query?: string;
       queries?: string[];
+      identifier?: string;
+      identifiers?: string[];
       provider?: string;
       limit?: number;
       options?: Record<string, unknown>;
@@ -104,16 +121,24 @@ export class SocialRouter {
     else if (src.url !== undefined) body.url = src.url;
     else if (src.queries !== undefined) body.queries = src.queries;
     else if (src.query !== undefined) body.query = src.query;
+    else if (src.identifiers !== undefined) body.identifiers = src.identifiers;
+    else if (src.identifier !== undefined) body.identifier = src.identifier;
     else {
       throw new Error(
-        `run("${service}") requires an input: 'url'/'urls' for a URL service, 'query'/'queries' for a query one. See listServices() for which one this service takes.`,
+        `run("${service}") requires an input: 'url'/'urls' for a URL service, 'query'/'queries' for a query one, 'identifier'/'identifiers' for an enrichment one. See listServices() for which one this service takes.`,
       );
     }
     if (src.provider !== undefined) body.provider = src.provider;
     if (src.limit !== undefined) body.limit = src.limit;
     if (src.options !== undefined) body.options = src.options;
 
-    return this.post<Extraction>(`/v1/extract/${servicePath(service)}`, body);
+    // The namespace comes from the generated map, never from a literal. This
+    // path was hardcoded to `/v1/extract/`, which made every enrichment
+    // service 404 — with a body the API had already validated as fine.
+    return this.post<Extraction>(
+      `/v1/${SERVICE_NAMESPACE[service]}/${servicePath(service)}`,
+      body,
+    );
   }
 
   /** Get a past run by ID. */
@@ -130,7 +155,7 @@ export class SocialRouter {
    * its offers in failover order, prices, caps, accepted input shapes and
    * typed options. Public — no credits, no auth needed.
    */
-  async listServices(filter?: { platform?: Platform }): Promise<CatalogueService[]> {
+  async listServices(filter?: { platform?: Subject }): Promise<CatalogueService[]> {
     const path = filter?.platform
       ? `/v1/services/${encodeURIComponent(filter.platform)}`
       : "/v1/services";
@@ -216,13 +241,13 @@ export class SocialRouter {
   }
 }
 
-/** "reddit/subreddit.posts" → "reddit/subreddit.posts", each segment encoded. */
 /**
- * Turn a service slug into the path segments under `/v1/extract`.
+ * Turn a service slug into path segments, each encoded.
  *
- * The slug ("linkedin/profile.info") is the service's name everywhere — in
- * logs, in the CLI, in `served_by`. The `extract` namespace lives in the URL
- * only, and is added by the caller above; it is never part of the slug.
+ * The slug ("linkedin/profile.info", "person/info") is the service's name
+ * everywhere — in logs, in the CLI, in `served_by`. The namespace lives in
+ * the URL only, is derived from the subject by the caller above, and is
+ * never part of the slug.
  */
 function servicePath(service: string): string {
   return service.split("/").map(encodeURIComponent).join("/");

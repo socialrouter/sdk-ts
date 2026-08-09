@@ -1,22 +1,30 @@
 import type {
   InputKindOf,
-  Platform,
   ServiceName,
   ServiceOptionsMap,
   ServiceSlug,
+  Subject,
 } from "./services.generated.js";
 
 export type {
+  Entity,
+  Namespace,
   Platform,
   ServiceName,
   ServiceSlug,
   ServiceOptionsMap,
+  Subject,
 } from "./services.generated.js";
 
 export type ExtractionStatus = "pending" | "completed" | "failed";
 
-/** What a service consumes: a URL per record, or a free-text query. */
-export type InputKind = "url" | "query";
+/**
+ * What a service consumes: a URL per record, a free-text query, or an
+ * identifier of the entity — an email, a domain, a profile URL, a
+ * provider-side id. The identifier kind is what makes "I have 500 emails,
+ * give me LinkedIn URLs" expressible.
+ */
+export type InputKind = "url" | "query" | "identifier";
 
 /**
  * A public offer id: `source/name`, e.g. `"apify/harshmaur"` or
@@ -58,12 +66,29 @@ export interface QueryInput {
 }
 
 /**
+ * Inputs of an identifier-kind service. Pass `identifier` or `identifiers`,
+ * not both.
+ *
+ * Each entry is any handle you happen to hold for the entity — an email, a
+ * domain, a LinkedIn URL, a provider-side id. They can be mixed in one call.
+ */
+export interface IdentifierInput {
+  identifier?: string;
+  identifiers?: string[];
+}
+
+/**
  * The body of `run(service, input)`, correlated with the service: a url-kind
- * service takes `url`/`urls`, a query-kind one takes `query`/`queries`, and
- * `options` is the option set that service declares.
+ * service takes `url`/`urls`, a query-kind one takes `query`/`queries`, an
+ * identifier-kind one takes `identifier`/`identifiers`, and `options` is the
+ * option set that service declares.
  */
 export type RunInput<S extends ServiceSlug> = RunCommon<S> &
-  (InputKindOf<S> extends "query" ? QueryInput : UrlInput);
+  (InputKindOf<S> extends "query"
+    ? QueryInput
+    : InputKindOf<S> extends "identifier"
+      ? IdentifierInput
+      : UrlInput);
 
 // ─── Results ─────────────────────────────────────────────
 
@@ -75,9 +100,10 @@ export interface ExtractionRecord {
 export interface Extraction {
   id: string;
   status: ExtractionStatus;
-  platform: Platform;
+  /** The left key of the service slug: a platform, or an enrichment entity. */
+  platform: Subject;
   service: ServiceName;
-  /** The primary input (first URL or query). */
+  /** The primary input (first URL, query or identifier). */
   url: string;
   /** Populated for query-kind services — the original list of queries. */
   queries?: string[];
@@ -159,15 +185,16 @@ export interface CatalogueOffer {
   requires_own_key: boolean;
 }
 
-/** One (platform, service) entry of the catalogue, as `GET /v1/services`. */
+/** One (subject, service) entry of the catalogue, as `GET /v1/services`. */
 export interface CatalogueService {
-  platform: Platform;
+  /** The left key of the service slug: a platform, or an enrichment entity. */
+  platform: Subject;
   service: ServiceName;
-  /** The endpoint that runs this service. */
+  /** The endpoint that runs this service, namespace included. */
   endpoint: string;
   input_kind: InputKind;
   /** Name of the request body field carrying the inputs. */
-  input_field: "urls" | "queries";
+  input_field: "urls" | "queries" | "identifiers";
   accepts: InputFormat[];
   options: ServiceOption[];
   /** Offers in failover order — the head serves unless one is pinned. */
@@ -182,7 +209,8 @@ export interface SourceInfo {
   name: string;
   description: string;
   status: SourceStatus;
-  platforms: Platform[];
+  /** Subjects this source serves — platforms and enrichment entities alike. */
+  platforms: Subject[];
   services_count: number;
   offers_count: number;
 }

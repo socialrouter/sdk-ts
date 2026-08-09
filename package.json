@@ -18,9 +18,12 @@
   ],
   "scripts": {
     "build": "tsc",
+    "test": "npm run test:unit && npm run test:contract",
+    "test:unit": "npm run build && node --test tests/*.test.ts",
+    "test:contract": "npm run build && node --env-file-if-exists=.env --test tests/contract/*.test.ts",
     "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
     "dev": "tsc --watch",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm test"
   },
   "keywords": [
     "socialrouter",

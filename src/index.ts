@@ -7,10 +7,14 @@ export {
   RateLimitError,
 } from "./errors.js";
 export {
+  ENTITIES,
+  ENTITY_SERVICES,
   PLATFORMS,
   PLATFORM_SERVICES,
   SERVICE_INPUT_KIND,
   SERVICE_METHODS,
+  SERVICE_NAMESPACE,
+  SUBJECTS,
 } from "./services.generated.js";
 export type {
   SocialRouterConfig,
@@ -19,12 +23,16 @@ export type {
   RunCommon,
   UrlInput,
   QueryInput,
+  IdentifierInput,
   OfferId,
   Extraction,
   ExtractionRecord,
   ExtractionStatus,
   InputKind,
+  Namespace,
   Platform,
+  Entity,
+  Subject,
   ServiceName,
   ServiceSlug,
   ServiceOptionsMap,
