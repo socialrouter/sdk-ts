@@ -16,6 +16,7 @@ import {
   AuthenticationError,
   InsufficientCreditsError,
   RateLimitError,
+  DASHBOARD_KEYS_URL,
 } from "../dist/index.js";
 
 const BASE = "https://api.test";
@@ -58,7 +59,23 @@ test("401 becomes an AuthenticationError carrying the API's detail", async () =>
       assert.equal(err.status, 401);
       assert.equal(err.code, "invalid_api_key");
       assert.equal(err.type, "authentication_error");
-      assert.equal(err.message, "API key not found");
+      // The API's wording is kept verbatim at the front; the SDK appends the
+      // only thing that fixes a 401 — where to make a new key.
+      assert.ok(err.message.startsWith("API key not found "));
+      assert.ok(err.message.includes(DASHBOARD_KEYS_URL));
+      assert.equal(err.message, `API key not found ${err.hint}`);
+      return true;
+    },
+  );
+});
+
+test("the 401 hint points at the dashboard keys page", async () => {
+  stubStatus(401, detail("missing_api_key", "auth", "Include your API key."));
+  await assert.rejects(
+    () => sr().getBalance(),
+    (err: AuthenticationError) => {
+      assert.equal(DASHBOARD_KEYS_URL, "https://www.socialrouter.io/dashboard/keys");
+      assert.ok(err.hint.includes(DASHBOARD_KEYS_URL));
       return true;
     },
   );

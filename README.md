@@ -136,7 +136,10 @@ try {
   await sr.run("linkedin/post.likes", { url: "..." });
 } catch (err) {
   if (err instanceof AuthenticationError) {
-    // 401 — invalid or missing API key
+    // 401 — invalid, revoked or missing API key.
+    // `err.message` already tells the user to create a new key on the
+    // dashboard; `err.hint` is that sentence alone, for your own UI.
+    console.error(err.hint);
   } else if (err instanceof InsufficientCreditsError) {
     // 402 — not enough credits
   } else if (err instanceof RateLimitError) {

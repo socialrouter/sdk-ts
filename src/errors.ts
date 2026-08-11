@@ -14,10 +14,28 @@ export class SocialRouterError extends Error {
   }
 }
 
+/** Where a key is created, rotated or revoked — the only fix for a 401. */
+export const DASHBOARD_KEYS_URL = "https://www.socialrouter.io/dashboard/keys";
+
 export class AuthenticationError extends SocialRouterError {
+  /**
+   * The actionable half of the message, kept separate so a caller rendering
+   * its own UI can show it apart from the API's wording.
+   */
+  public hint: string;
+
+  /**
+   * A 401 is the one failure no retry and no code change gets past: the key is
+   * missing, revoked or wrong, and only a human with the dashboard open can
+   * fix it. The API's message says what happened, so the error appends where
+   * to go — otherwise the caller reads "invalid or has been revoked" and has
+   * to go looking for the page themselves.
+   */
   constructor(detail: ApiErrorDetail) {
     super(detail, 401);
     this.name = "AuthenticationError";
+    this.hint = `Create a new API key at ${DASHBOARD_KEYS_URL} and use it as your SocialRouter API key.`;
+    this.message = `${detail.message} ${this.hint}`;
   }
 }
 
