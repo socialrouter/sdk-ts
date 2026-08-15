@@ -28,14 +28,20 @@ export const PLATFORM_SERVICES = {
     "place.search",
   ],
   instagram: [
+    "place.search",
     "post.comments",
     "post.info",
     "profile.info",
+    "profile.mentions",
+    "profile.posts",
+    "profile.reels",
+    "profile.search",
     "reel.info",
   ],
   linkedin: [
     "company.info",
     "job.info",
+    "post.comments",
     "post.info",
     "post.likes",
     "post.search",
@@ -57,6 +63,7 @@ export const PLATFORM_SERVICES = {
   ],
   tiktok: [
     "profile.info",
+    "profile.videos",
     "video.comments",
     "video.info",
   ],
@@ -143,12 +150,18 @@ export const SERVICE_NAMESPACE = {
   "googlemaps/place.info": "extract",
   "googlemaps/place.reviews": "extract",
   "googlemaps/place.search": "extract",
+  "instagram/place.search": "extract",
   "instagram/post.comments": "extract",
   "instagram/post.info": "extract",
   "instagram/profile.info": "extract",
+  "instagram/profile.mentions": "extract",
+  "instagram/profile.posts": "extract",
+  "instagram/profile.reels": "extract",
+  "instagram/profile.search": "extract",
   "instagram/reel.info": "extract",
   "linkedin/company.info": "extract",
   "linkedin/job.info": "extract",
+  "linkedin/post.comments": "extract",
   "linkedin/post.info": "extract",
   "linkedin/post.likes": "extract",
   "linkedin/post.search": "extract",
@@ -164,6 +177,7 @@ export const SERVICE_NAMESPACE = {
   "snapchat/post.info": "extract",
   "snapchat/profile.info": "extract",
   "tiktok/profile.info": "extract",
+  "tiktok/profile.videos": "extract",
   "tiktok/video.comments": "extract",
   "tiktok/video.info": "extract",
   "x/post.info": "extract",
@@ -199,12 +213,18 @@ export const SERVICE_INPUT_KIND = {
   "googlemaps/place.info": "url",
   "googlemaps/place.reviews": "url",
   "googlemaps/place.search": "query",
+  "instagram/place.search": "query",
   "instagram/post.comments": "url",
   "instagram/post.info": "url",
   "instagram/profile.info": "url",
+  "instagram/profile.mentions": "url",
+  "instagram/profile.posts": "url",
+  "instagram/profile.reels": "url",
+  "instagram/profile.search": "query",
   "instagram/reel.info": "url",
   "linkedin/company.info": "url",
   "linkedin/job.info": "url",
+  "linkedin/post.comments": "url",
   "linkedin/post.info": "url",
   "linkedin/post.likes": "url",
   "linkedin/post.search": "query",
@@ -220,6 +240,7 @@ export const SERVICE_INPUT_KIND = {
   "snapchat/post.info": "url",
   "snapchat/profile.info": "url",
   "tiktok/profile.info": "url",
+  "tiktok/profile.videos": "url",
   "tiktok/video.comments": "url",
   "tiktok/video.info": "url",
   "x/post.info": "url",
@@ -267,14 +288,20 @@ export const SERVICE_METHODS = {
     placeSearch: "place.search",
   },
   instagram: {
+    placeSearch: "place.search",
     postComments: "post.comments",
     postInfo: "post.info",
     profileInfo: "profile.info",
+    profileMentions: "profile.mentions",
+    profilePosts: "profile.posts",
+    profileReels: "profile.reels",
+    profileSearch: "profile.search",
     reelInfo: "reel.info",
   },
   linkedin: {
     companyInfo: "company.info",
     jobInfo: "job.info",
+    postComments: "post.comments",
     postInfo: "post.info",
     postLikes: "post.likes",
     postSearch: "post.search",
@@ -300,6 +327,7 @@ export const SERVICE_METHODS = {
   },
   tiktok: {
     profileInfo: "profile.info",
+    profileVideos: "profile.videos",
     videoComments: "video.comments",
     videoInfo: "video.info",
   },
@@ -338,6 +366,30 @@ export interface CompanySearchOptions {
   revenueMin?: number;
   /** Maximum annual revenue, in USD. */
   revenueMax?: number;
+}
+
+/** Options accepted by `instagram/profile.mentions`. */
+export interface InstagramProfileMentionsOptions {
+  /** Only return posts published on or after this UTC date. A relative value works too — "1 day", "2 months", "3 years". Format: YYYY-MM-DD. */
+  onlyPostsNewerThan?: string;
+}
+
+/** Options accepted by `instagram/profile.posts`. */
+export interface InstagramProfilePostsOptions {
+  /** Only return posts published on or after this UTC date. A relative value works too — "1 day", "2 months", "3 years". Format: YYYY-MM-DD. */
+  onlyPostsNewerThan?: string;
+}
+
+/** Options accepted by `instagram/profile.reels`. */
+export interface InstagramProfileReelsOptions {
+  /** Only return posts published on or after this UTC date. A relative value works too — "1 day", "2 months", "3 years". Format: YYYY-MM-DD. */
+  onlyPostsNewerThan?: string;
+}
+
+/** Options accepted by `linkedin/post.comments`. */
+export interface LinkedinPostCommentsOptions {
+  /** Only return comments posted within this window. */
+  postedLimit?: "any" | "24h" | "week" | "month" | "3months" | "6months" | "year";
 }
 
 /** Options accepted by `linkedin/profile.info`. */
@@ -383,6 +435,14 @@ export interface RedditSubredditPostsOptions {
   /** Only posts created on/after this UTC date. Format: YYYY-MM-DD. */
   postedAfter?: string;
   /** Only posts created before this UTC date. Format: YYYY-MM-DD. */
+  postedBefore?: string;
+}
+
+/** Options accepted by `tiktok/profile.videos`. */
+export interface TiktokProfileVideosOptions {
+  /** Only videos published on/after this UTC date. Format: YYYY-MM-DD. */
+  postedAfter?: string;
+  /** Only videos published before this UTC date. Format: YYYY-MM-DD. */
   postedBefore?: string;
 }
 
@@ -493,12 +553,18 @@ export interface ServiceOptionsMap {
   "googlemaps/place.info": Record<string, never>;
   "googlemaps/place.reviews": Record<string, never>;
   "googlemaps/place.search": Record<string, never>;
+  "instagram/place.search": Record<string, never>;
   "instagram/post.comments": Record<string, never>;
   "instagram/post.info": Record<string, never>;
   "instagram/profile.info": Record<string, never>;
+  "instagram/profile.mentions": InstagramProfileMentionsOptions;
+  "instagram/profile.posts": InstagramProfilePostsOptions;
+  "instagram/profile.reels": InstagramProfileReelsOptions;
+  "instagram/profile.search": Record<string, never>;
   "instagram/reel.info": Record<string, never>;
   "linkedin/company.info": Record<string, never>;
   "linkedin/job.info": Record<string, never>;
+  "linkedin/post.comments": LinkedinPostCommentsOptions;
   "linkedin/post.info": Record<string, never>;
   "linkedin/post.likes": Record<string, never>;
   "linkedin/post.search": Record<string, never>;
@@ -514,6 +580,7 @@ export interface ServiceOptionsMap {
   "snapchat/post.info": Record<string, never>;
   "snapchat/profile.info": Record<string, never>;
   "tiktok/profile.info": Record<string, never>;
+  "tiktok/profile.videos": TiktokProfileVideosOptions;
   "tiktok/video.comments": Record<string, never>;
   "tiktok/video.info": Record<string, never>;
   "x/post.info": Record<string, never>;
