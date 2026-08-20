@@ -47,6 +47,7 @@ export const PLATFORM_SERVICES = {
     "post.search",
     "profile.info",
     "profile.posts",
+    "profile.search",
   ],
   pinterest: [
     "pin.info",
@@ -167,6 +168,7 @@ export const SERVICE_NAMESPACE = {
   "linkedin/post.search": "extract",
   "linkedin/profile.info": "extract",
   "linkedin/profile.posts": "extract",
+  "linkedin/profile.search": "extract",
   "person/info": "enrich",
   "person/search": "enrich",
   "pinterest/pin.info": "extract",
@@ -230,6 +232,7 @@ export const SERVICE_INPUT_KIND = {
   "linkedin/post.search": "query",
   "linkedin/profile.info": "url",
   "linkedin/profile.posts": "url",
+  "linkedin/profile.search": "query",
   "person/info": "identifier",
   "person/search": "query",
   "pinterest/pin.info": "url",
@@ -307,6 +310,7 @@ export const SERVICE_METHODS = {
     postSearch: "post.search",
     profileInfo: "profile.info",
     profilePosts: "profile.posts",
+    profileSearch: "profile.search",
   },
   person: {
     info: "info",
@@ -570,6 +574,7 @@ export interface ServiceOptionsMap {
   "linkedin/post.search": Record<string, never>;
   "linkedin/profile.info": LinkedinProfileInfoOptions;
   "linkedin/profile.posts": Record<string, never>;
+  "linkedin/profile.search": Record<string, never>;
   "person/info": PersonInfoOptions;
   "person/search": PersonSearchOptions;
   "pinterest/pin.info": Record<string, never>;
