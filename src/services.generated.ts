@@ -8,6 +8,12 @@
 
 /** Every callable extraction service, by platform. */
 export const PLATFORM_SERVICES = {
+  apollo: [
+    "company.info",
+    "company.search",
+    "profile.info",
+    "profile.search",
+  ],
   bluesky: [
     "post.info",
   ],
@@ -41,6 +47,7 @@ export const PLATFORM_SERVICES = {
   linkedin: [
     "company.info",
     "job.info",
+    "job.search",
     "post.comments",
     "post.info",
     "post.likes",
@@ -136,6 +143,10 @@ export type Namespace = "extract" | "enrich";
  * enrichment service silently uncallable.
  */
 export const SERVICE_NAMESPACE = {
+  "apollo/company.info": "extract",
+  "apollo/company.search": "extract",
+  "apollo/profile.info": "extract",
+  "apollo/profile.search": "extract",
   "bluesky/post.info": "extract",
   "company/info": "enrich",
   "company/search": "enrich",
@@ -162,6 +173,7 @@ export const SERVICE_NAMESPACE = {
   "instagram/reel.info": "extract",
   "linkedin/company.info": "extract",
   "linkedin/job.info": "extract",
+  "linkedin/job.search": "extract",
   "linkedin/post.comments": "extract",
   "linkedin/post.info": "extract",
   "linkedin/post.likes": "extract",
@@ -200,6 +212,10 @@ export const SERVICE_NAMESPACE = {
  * identifier of the entity (an email, a domain, a profile URL, an id).
  */
 export const SERVICE_INPUT_KIND = {
+  "apollo/company.info": "identifier",
+  "apollo/company.search": "query",
+  "apollo/profile.info": "identifier",
+  "apollo/profile.search": "query",
   "bluesky/post.info": "url",
   "company/info": "identifier",
   "company/search": "query",
@@ -226,6 +242,7 @@ export const SERVICE_INPUT_KIND = {
   "instagram/reel.info": "url",
   "linkedin/company.info": "url",
   "linkedin/job.info": "url",
+  "linkedin/job.search": "query",
   "linkedin/post.comments": "url",
   "linkedin/post.info": "url",
   "linkedin/post.likes": "url",
@@ -267,6 +284,12 @@ export type InputKindOf<S extends ServiceSlug> = (typeof SERVICE_INPUT_KIND)[S];
  * `sr.person.info(...)` runs "person/info".
  */
 export const SERVICE_METHODS = {
+  apollo: {
+    companyInfo: "company.info",
+    companySearch: "company.search",
+    profileInfo: "profile.info",
+    profileSearch: "profile.search",
+  },
   bluesky: {
     postInfo: "post.info",
   },
@@ -304,6 +327,7 @@ export const SERVICE_METHODS = {
   linkedin: {
     companyInfo: "company.info",
     jobInfo: "job.info",
+    jobSearch: "job.search",
     postComments: "post.comments",
     postInfo: "post.info",
     postLikes: "post.likes",
@@ -354,6 +378,52 @@ export const SERVICE_METHODS = {
 
 // ─── Typed options, per service ──────────────────────────
 
+/** Options accepted by `apollo/company.search`. */
+export interface ApolloCompanySearchOptions {
+  /** What the query matches: the company's industry/keyword tags (default, e.g. "fintech"), or its name. */
+  match?: "keywords" | "name";
+  /** Comma-separated headquarters locations. */
+  locations?: string;
+  /** Comma-separated headquarters locations to exclude. */
+  excludeLocations?: string;
+  /** Headcount range, e.g. "51,200". Format: min,max. */
+  employeeRange?: string;
+  /** Comma-separated technologies the company uses, e.g. "salesforce, hubspot". */
+  technologies?: string;
+  /** Minimum annual revenue, in USD. */
+  revenueMin?: number;
+  /** Maximum annual revenue, in USD. */
+  revenueMax?: number;
+}
+
+/** Options accepted by `apollo/profile.info`. */
+export interface ApolloProfileInfoOptions {
+  /** Also return personal email addresses. Consumes extra credits on your own provider account. Default: false. */
+  revealPersonalEmails?: boolean;
+}
+
+/** Options accepted by `apollo/profile.search`. */
+export interface ApolloProfileSearchOptions {
+  /** Comma-separated job titles. Similar titles are matched too, e.g. "head of growth, growth lead". */
+  titles?: string;
+  /** Comma-separated seniority levels: owner, founder, c_suite, partner, vp, head, director, manager, senior, entry, intern. */
+  seniorities?: string;
+  /** Comma-separated locations the person lives in, e.g. "Paris, London". */
+  locations?: string;
+  /** Comma-separated locations of the employer's headquarters. */
+  companyLocations?: string;
+  /** Comma-separated employer domains, e.g. "stripe.com, figma.com". */
+  companyDomains?: string;
+  /** Employer headcount range, e.g. "11,50". Format: min,max. */
+  employeeRange?: string;
+  /** Only people whose work email has this status. */
+  emailStatus?: "verified" | "unverified" | "likely_to_engage" | "unavailable";
+  /** Resolve each hit into a full profile, which is the only way to obtain a LinkedIn URL and an unmasked name. Consumes 1 credit per person matched on your own provider account. Set false for a credit-free preview: masked last names, no LinkedIn URL, is_obfuscated: true on every record. Default: true. */
+  enrich?: boolean;
+  /** Also return personal email addresses. Consumes extra credits on your own provider account. Default: false. */
+  revealPersonalEmails?: boolean;
+}
+
 /** Options accepted by `company/search`. */
 export interface CompanySearchOptions {
   /** What the query matches: the company's industry/keyword tags (default, e.g. "fintech"), or its name. */
@@ -388,6 +458,28 @@ export interface InstagramProfilePostsOptions {
 export interface InstagramProfileReelsOptions {
   /** Only return posts published on or after this UTC date. A relative value works too — "1 day", "2 months", "3 years". Format: YYYY-MM-DD. */
   onlyPostsNewerThan?: string;
+}
+
+/** Options accepted by `linkedin/job.search`. */
+export interface LinkedinJobSearchOptions {
+  /** Where to search, as LinkedIn spells it: a city, region or country, e.g. "Paris", "Greater London", "United States". LinkedIn scopes a job search to a place, so a keyword on its own is not a search. */
+  location?: string;
+  /** Two-letter country code narrowing the location, e.g. "FR", "US". Format: ISO 3166-1 alpha-2. */
+  country?: string;
+  /** Only return listings posted within this window. */
+  timeRange?: "Past 24 hours" | "Past week" | "Past month" | "Any time";
+  /** Employment type. */
+  jobType?: "Full-time" | "Part-time" | "Contract" | "Temporary" | "Internship" | "Volunteer" | "Other";
+  /** Seniority of the role. */
+  experienceLevel?: "Internship" | "Entry level" | "Associate" | "Mid-Senior level" | "Director" | "Executive";
+  /** Work arrangement. */
+  remote?: "Remote" | "On-site" | "Hybrid";
+  /** Only return listings from this company. */
+  company?: string;
+  /** How far around `location` to search, in LinkedIn's own units, e.g. "25 mi". */
+  locationRadius?: string;
+  /** Drop listings whose title does not contain the keyword. Fewer results, tighter match, fewer billed records. Default: false. */
+  selectiveSearch?: boolean;
 }
 
 /** Options accepted by `linkedin/post.comments`. */
@@ -542,6 +634,10 @@ export interface YoutubeVideoSearchOptions {
  * rejects unknown options with a corrective 400 rather than ignoring them.
  */
 export interface ServiceOptionsMap {
+  "apollo/company.info": Record<string, never>;
+  "apollo/company.search": ApolloCompanySearchOptions;
+  "apollo/profile.info": ApolloProfileInfoOptions;
+  "apollo/profile.search": ApolloProfileSearchOptions;
   "bluesky/post.info": Record<string, never>;
   "company/info": Record<string, never>;
   "company/search": CompanySearchOptions;
@@ -568,6 +664,7 @@ export interface ServiceOptionsMap {
   "instagram/reel.info": Record<string, never>;
   "linkedin/company.info": Record<string, never>;
   "linkedin/job.info": Record<string, never>;
+  "linkedin/job.search": LinkedinJobSearchOptions;
   "linkedin/post.comments": LinkedinPostCommentsOptions;
   "linkedin/post.info": Record<string, never>;
   "linkedin/post.likes": Record<string, never>;
