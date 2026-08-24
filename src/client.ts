@@ -135,8 +135,21 @@ export class SocialRouter {
     // The namespace comes from the generated map, never from a literal. This
     // path was hardcoded to `/v1/extract/`, which made every enrichment
     // service 404 — with a body the API had already validated as fine.
+    //
+    // A miss means this SDK build predates the slug: the generated map is a
+    // build-time snapshot, while callers (the MCP server, the CLI) validate
+    // against the live catalogue. Fail here with the real cause instead of
+    // interpolating `undefined` and letting the API answer with a 404 that
+    // points at the route rather than at the stale dependency.
+    const namespace = SERVICE_NAMESPACE[service];
+    if (!namespace) {
+      throw new Error(
+        `run("${service}"): this SDK build does not know that service. Upgrade @socialrouter/sdk to a version whose catalogue includes it, or call listServices() to see what this build can run.`,
+      );
+    }
+
     return this.post<Extraction>(
-      `/v1/${SERVICE_NAMESPACE[service]}/${servicePath(service)}`,
+      `/v1/${namespace}/${servicePath(service)}`,
       body,
     );
   }

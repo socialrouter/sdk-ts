@@ -86,6 +86,18 @@ test("no service is ever addressed under a hardcoded prefix", async () => {
   }
 });
 
+test("a slug this build does not know fails here, not as a 404", async () => {
+  // The map is a build-time snapshot; the MCP server and the CLI validate
+  // against the live catalogue. When an old SDK build meets a new slug the
+  // lookup misses, and interpolating that miss shipped `/v1/undefined/...`
+  // to the API — a 404 blaming the route instead of the stale dependency.
+  await assert.rejects(
+    () => sr().run("instagram/profile.telepathy" as never, { url: "https://example.com/x" } as never),
+    /does not know that service/,
+  );
+  assert.equal(calls.length, 0, "an unknown slug must not reach the network");
+});
+
 test("path segments are encoded, so a slug cannot alter the target", async () => {
   // Not reachable through the typed surface, but `run()` takes a string at
   // runtime and the path is interpolated.
