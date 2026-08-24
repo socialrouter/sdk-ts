@@ -74,6 +74,7 @@ export const PLATFORM_SERVICES = {
     "profile.videos",
     "video.comments",
     "video.info",
+    "video.search",
   ],
   x: [
     "post.info",
@@ -194,6 +195,7 @@ export const SERVICE_NAMESPACE = {
   "tiktok/profile.videos": "extract",
   "tiktok/video.comments": "extract",
   "tiktok/video.info": "extract",
+  "tiktok/video.search": "extract",
   "x/post.info": "extract",
   "x/profile.info": "extract",
   "youtube/channel.info": "extract",
@@ -263,6 +265,7 @@ export const SERVICE_INPUT_KIND = {
   "tiktok/profile.videos": "url",
   "tiktok/video.comments": "url",
   "tiktok/video.info": "url",
+  "tiktok/video.search": "query",
   "x/post.info": "url",
   "x/profile.info": "url",
   "youtube/channel.info": "url",
@@ -358,6 +361,7 @@ export const SERVICE_METHODS = {
     profileVideos: "profile.videos",
     videoComments: "video.comments",
     videoInfo: "video.info",
+    videoSearch: "video.search",
   },
   x: {
     postInfo: "post.info",
@@ -542,6 +546,14 @@ export interface TiktokProfileVideosOptions {
   postedBefore?: string;
 }
 
+/** Options accepted by `tiktok/video.search`. */
+export interface TiktokVideoSearchOptions {
+  /** Two-letter country code for the location the search runs from, e.g. "FR". TikTok tailors search results to the viewer, so this is what scopes a query to one market. Format: ISO 3166-1 alpha-2. */
+  country?: string;
+  /** Comma-separated post ids to skip. Feed back the ids already collected so a repeated search is not billed for the same videos twice. */
+  postsToNotInclude?: string;
+}
+
 /** Options accepted by `youtube/channel.shorts`. */
 export interface YoutubeChannelShortsOptions {
   /** Order of the channel's videos (e.g. NEWEST, POPULAR, OLDEST). */
@@ -685,6 +697,7 @@ export interface ServiceOptionsMap {
   "tiktok/profile.videos": TiktokProfileVideosOptions;
   "tiktok/video.comments": Record<string, never>;
   "tiktok/video.info": Record<string, never>;
+  "tiktok/video.search": TiktokVideoSearchOptions;
   "x/post.info": Record<string, never>;
   "x/profile.info": Record<string, never>;
   "youtube/channel.info": Record<string, never>;
