@@ -13,6 +13,7 @@ import {
   SERVICE_METHODS,
   SERVICE_NAMESPACE,
   SUBJECTS,
+  type Namespace,
   type ServiceSlug,
   type Subject,
 } from "./services.generated.js";
@@ -149,7 +150,7 @@ export class SocialRouter {
     }
 
     return this.post<Extraction>(
-      `/v1/${namespace}/${servicePath(service)}`,
+      `/v1/${servicePath(service, namespace)}`,
       body,
     );
   }
@@ -178,7 +179,7 @@ export class SocialRouter {
 
   /** One catalogue entry: `getService("reddit/subreddit.posts")`. */
   async getService(service: ServiceSlug): Promise<CatalogueService> {
-    return this.get<CatalogueService>(`/v1/services/${servicePath(service)}`);
+    return this.get<CatalogueService>(`/v1/services/${service.split("/").map(encodeURIComponent).join("/")}`);
   }
 
   /** The data sources behind the offers (Apify, Bright Data…). */
@@ -255,13 +256,23 @@ export class SocialRouter {
 }
 
 /**
- * Turn a service slug into path segments, each encoded.
+ * The URL a service runs at.
  *
  * The slug ("linkedin/profile.info", "person/info") is the service's name
- * everywhere — in logs, in the CLI, in `served_by`. The namespace lives in
- * the URL only, is derived from the subject by the caller above, and is
- * never part of the slug.
+ * everywhere — in logs, in the CLI, in `served_by` — and each segment is
+ * encoded. The namespace lives in the URL only, is derived from the subject
+ * by the caller above, and is never part of the slug.
+ *
+ * `enrich` carries no service segment: an entity has exactly one service
+ * today, so naming it in the URL would discriminate nothing. `extract`
+ * still does — a platform can serve several. (Same rule as
+ * `endpointOf` in @socialrouter/core.)
  */
-function servicePath(service: string): string {
-  return service.split("/").map(encodeURIComponent).join("/");
+function servicePath(service: string, namespace: Namespace): string {
+  if (namespace === "enrich") return `enrich/${encodeURIComponent(subjectOf(service))}`;
+  return `${namespace}/${service.split("/").map(encodeURIComponent).join("/")}`;
+}
+
+function subjectOf(service: string): string {
+  return service.split("/")[0];
 }

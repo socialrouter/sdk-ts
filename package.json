@@ -54,7 +54,7 @@
     "node": ">=18"
   },
   "devDependencies": {
-    "@types/node": "^25.5.2",
-    "typescript": "^6.0.2"
+    "@types/node": "^25.9.5",
+    "typescript": "^6.0.3"
   }
 }

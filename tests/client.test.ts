@@ -62,10 +62,12 @@ test("an extraction service is called under /v1/extract", async () => {
   assert.equal(calls[0].url, "/v1/extract/reddit/subreddit.posts");
 });
 
-test("an enrichment service is called under /v1/enrich", async () => {
-  // The regression this file exists for.
+test("an enrichment service is called under /v1/enrich, with no service segment", async () => {
+  // The regression this file exists for — plus the later re-shaping of the
+  // enrich route: an entity has exactly one service, so the URL doesn't
+  // name it (`/v1/enrich/person/info` now answers `endpoint_moved`).
   await sr().run("person/info", { identifiers: ["ada@analytical.dev"] });
-  assert.equal(calls[0].url, "/v1/enrich/person/info");
+  assert.equal(calls[0].url, "/v1/enrich/person");
 });
 
 test("no service is ever addressed under a hardcoded prefix", async () => {
@@ -82,7 +84,11 @@ test("no service is ever addressed under a hardcoded prefix", async () => {
           : { url: "https://example.com/x" };
 
     await sr().run(slug as never, input as never);
-    assert.equal(calls[0].url, `/v1/${namespace}/${slug}`, slug);
+    // Extract carries the full slug; enrich drops the service segment — an
+    // entity has exactly one service, so the URL doesn't ask which.
+    const expected =
+      namespace === "enrich" ? `/v1/enrich/${slug.split("/")[0]}` : `/v1/${namespace}/${slug}`;
+    assert.equal(calls[0].url, expected, slug);
   }
 });
 
@@ -163,7 +169,7 @@ test("the per-subject accessors exist for entities, not just platforms", async (
 
   calls = [];
   await client.person.info({ identifiers: ["ada@analytical.dev"] });
-  assert.equal(calls[0].url, "/v1/enrich/person/info");
+  assert.equal(calls[0].url, "/v1/enrich/person");
 });
 
 // ─── Catalogue ───────────────────────────────────────────

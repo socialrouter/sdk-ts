@@ -97,11 +97,9 @@ export const PLATFORM_SERVICES = {
 export const ENTITY_SERVICES = {
   company: [
     "info",
-    "search",
   ],
   person: [
     "info",
-    "search",
   ],
 } as const;
 
@@ -150,7 +148,6 @@ export const SERVICE_NAMESPACE = {
   "apollo/profile.search": "extract",
   "bluesky/post.info": "extract",
   "company/info": "enrich",
-  "company/search": "enrich",
   "facebook/event.info": "extract",
   "facebook/group.posts": "extract",
   "facebook/marketplace.listings": "extract",
@@ -183,7 +180,6 @@ export const SERVICE_NAMESPACE = {
   "linkedin/profile.posts": "extract",
   "linkedin/profile.search": "extract",
   "person/info": "enrich",
-  "person/search": "enrich",
   "pinterest/pin.info": "extract",
   "pinterest/profile.info": "extract",
   "reddit/post.comments": "extract",
@@ -220,7 +216,6 @@ export const SERVICE_INPUT_KIND = {
   "apollo/profile.search": "query",
   "bluesky/post.info": "url",
   "company/info": "identifier",
-  "company/search": "query",
   "facebook/event.info": "url",
   "facebook/group.posts": "url",
   "facebook/marketplace.listings": "url",
@@ -253,7 +248,6 @@ export const SERVICE_INPUT_KIND = {
   "linkedin/profile.posts": "url",
   "linkedin/profile.search": "query",
   "person/info": "identifier",
-  "person/search": "query",
   "pinterest/pin.info": "url",
   "pinterest/profile.info": "url",
   "reddit/post.comments": "url",
@@ -298,7 +292,6 @@ export const SERVICE_METHODS = {
   },
   company: {
     info: "info",
-    search: "search",
   },
   facebook: {
     eventInfo: "event.info",
@@ -341,7 +334,6 @@ export const SERVICE_METHODS = {
   },
   person: {
     info: "info",
-    search: "search",
   },
   pinterest: {
     pinInfo: "pin.info",
@@ -428,24 +420,6 @@ export interface ApolloProfileSearchOptions {
   revealPersonalEmails?: boolean;
 }
 
-/** Options accepted by `company/search`. */
-export interface CompanySearchOptions {
-  /** What the query matches: the company's industry/keyword tags (default, e.g. "fintech"), or its name. */
-  match?: "keywords" | "name";
-  /** Comma-separated headquarters locations. */
-  locations?: string;
-  /** Comma-separated headquarters locations to exclude. */
-  excludeLocations?: string;
-  /** Headcount range, e.g. "51,200". Format: min,max. */
-  employeeRange?: string;
-  /** Comma-separated technologies the company uses, e.g. "salesforce, hubspot". */
-  technologies?: string;
-  /** Minimum annual revenue, in USD. */
-  revenueMin?: number;
-  /** Maximum annual revenue, in USD. */
-  revenueMax?: number;
-}
-
 /** Options accepted by `instagram/profile.mentions`. */
 export interface InstagramProfileMentionsOptions {
   /** Only return posts published on or after this UTC date. A relative value works too — "1 day", "2 months", "3 years". Format: YYYY-MM-DD. */
@@ -500,28 +474,6 @@ export interface LinkedinProfileInfoOptions {
 
 /** Options accepted by `person/info`. */
 export interface PersonInfoOptions {
-  /** Also return personal email addresses. Consumes extra credits on your own provider account. Default: false. */
-  revealPersonalEmails?: boolean;
-}
-
-/** Options accepted by `person/search`. */
-export interface PersonSearchOptions {
-  /** Comma-separated job titles. Similar titles are matched too, e.g. "head of growth, growth lead". */
-  titles?: string;
-  /** Comma-separated seniority levels: owner, founder, c_suite, partner, vp, head, director, manager, senior, entry, intern. */
-  seniorities?: string;
-  /** Comma-separated locations the person lives in, e.g. "Paris, London". */
-  locations?: string;
-  /** Comma-separated locations of the employer's headquarters. */
-  companyLocations?: string;
-  /** Comma-separated employer domains, e.g. "stripe.com, figma.com". */
-  companyDomains?: string;
-  /** Employer headcount range, e.g. "11,50". Format: min,max. */
-  employeeRange?: string;
-  /** Only people whose work email has this status. */
-  emailStatus?: "verified" | "unverified" | "likely_to_engage" | "unavailable";
-  /** Resolve each hit into a full profile, which is the only way to obtain a LinkedIn URL and an unmasked name. Consumes 1 credit per person matched on your own provider account. Set false for a credit-free preview: masked last names, no LinkedIn URL, is_obfuscated: true on every record. Default: true. */
-  enrich?: boolean;
   /** Also return personal email addresses. Consumes extra credits on your own provider account. Default: false. */
   revealPersonalEmails?: boolean;
 }
@@ -652,7 +604,6 @@ export interface ServiceOptionsMap {
   "apollo/profile.search": ApolloProfileSearchOptions;
   "bluesky/post.info": Record<string, never>;
   "company/info": Record<string, never>;
-  "company/search": CompanySearchOptions;
   "facebook/event.info": Record<string, never>;
   "facebook/group.posts": Record<string, never>;
   "facebook/marketplace.listings": Record<string, never>;
@@ -685,7 +636,6 @@ export interface ServiceOptionsMap {
   "linkedin/profile.posts": Record<string, never>;
   "linkedin/profile.search": Record<string, never>;
   "person/info": PersonInfoOptions;
-  "person/search": PersonSearchOptions;
   "pinterest/pin.info": Record<string, never>;
   "pinterest/profile.info": Record<string, never>;
   "reddit/post.comments": Record<string, never>;

@@ -66,11 +66,14 @@ test("the SDK offers exactly the services the API serves", () => {
 
 test("the path the SDK builds is the endpoint the API publishes", () => {
   // The regression, checked against the source of truth instead of a fixture:
-  // `run()` composes /v1/{namespace}/{slug} from SERVICE_NAMESPACE, and the
-  // catalogue states the endpoint outright.
+  // `run()` composes the endpoint from SERVICE_NAMESPACE, and the catalogue
+  // states it outright. `enrich` carries no service segment — an entity has
+  // exactly one service, so the URL doesn't name it.
   for (const [slug, service] of liveBySlug) {
     const namespace = SERVICE_NAMESPACE[slug as keyof typeof SERVICE_NAMESPACE];
-    assert.equal(service.endpoint, `/v1/${namespace}/${slug}`, slug);
+    const expected =
+      namespace === "enrich" ? `/v1/enrich/${slug.split("/")[0]}` : `/v1/${namespace}/${slug}`;
+    assert.equal(service.endpoint, expected, slug);
   }
 });
 
