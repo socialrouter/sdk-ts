@@ -1,7 +1,7 @@
 // ─── GENERATED FILE — DO NOT EDIT ────────────────────────
 //
-// Source of truth: @socialrouter/core (PLATFORM_SERVICES, ENTITY_SERVICES
-// + input specs). Regenerate with `npm run gen:sdk` from packages/core.
+// Source of truth: the live catalogue at GET /v1/services.
+// Regenerate with `npm run gen:services`.
 //
 // Only services served by at least one offer are listed: calling one
 // that isn't would type-check here and 404 at the API.
@@ -420,6 +420,22 @@ export interface ApolloProfileSearchOptions {
   revealPersonalEmails?: boolean;
 }
 
+/** Options accepted by `googlemaps/place.search`. */
+export interface GooglemapsPlaceSearchOptions {
+  /** Language for the search query and the returned place data, as a two-letter code, e.g. "fr", "de", "es". Google Maps localizes both the ranking and the text fields (category, address, opening-hours labels) to it. Defaults to "en". Format: ISO 639-1. Default: "en". */
+  language?: string;
+  /** Restrict the search to one country, as a lowercase two-letter code, e.g. "us", "fr", "gb". The coarse geographic scope — combine with city/state for a tighter area. Format: ISO 3166-1 alpha-2 (lowercase). */
+  countryCode?: string;
+  /** City to focus the search on, as free text, e.g. "Brooklyn". Best combined with countryCode. */
+  city?: string;
+  /** State / region to focus the search on, as free text, e.g. "New York". */
+  state?: string;
+  /** County to focus the search on, as free text, e.g. "Kings County". */
+  county?: string;
+  /** Postal / ZIP code to focus the search on, e.g. "11201". The actor only honours it together with countryCode and city, and only for a single search term. */
+  postalCode?: string;
+}
+
 /** Options accepted by `instagram/profile.mentions`. */
 export interface InstagramProfileMentionsOptions {
   /** Only return posts published on or after this UTC date. A relative value works too — "1 day", "2 months", "3 years". Format: YYYY-MM-DD. */
@@ -615,7 +631,7 @@ export interface ServiceOptionsMap {
   "facebook/profile.reels": Record<string, never>;
   "googlemaps/place.info": Record<string, never>;
   "googlemaps/place.reviews": Record<string, never>;
-  "googlemaps/place.search": Record<string, never>;
+  "googlemaps/place.search": GooglemapsPlaceSearchOptions;
   "instagram/place.search": Record<string, never>;
   "instagram/post.comments": Record<string, never>;
   "instagram/post.info": Record<string, never>;
