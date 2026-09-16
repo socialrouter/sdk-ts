@@ -60,7 +60,7 @@ test("the SDK offers exactly the services the API serves", () => {
   assert.deepEqual(
     { missing, stale },
     { missing: [], stale: [] },
-    "services.generated.ts has drifted from the live catalogue — regenerate it with `npm run gen:sdk` from packages/core",
+    "services.generated.ts has drifted from the live catalogue — regenerate it with `npm run gen:services`",
   );
 });
 
