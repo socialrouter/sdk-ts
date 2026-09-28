@@ -4,13 +4,27 @@ export class SocialRouterError extends Error {
   public code: string;
   public type: string;
   public status: number;
+  /**
+   * The whole `error` envelope, including the corrective fields a validation
+   * error carries (`valid_options`, `invalid_inputs`, `did_you_mean`…) and
+   * `provider_detail` on a run placed on your own provider key.
+   */
+  public detail: ApiErrorDetail;
+  /**
+   * The id of the run that failed, when the failure came from a run. It is
+   * the only handle on a failed run: pass it to `getExtraction()`, or quote
+   * it in a bug report.
+   */
+  public extractionId?: string;
 
-  constructor(detail: ApiErrorDetail, status: number) {
+  constructor(detail: ApiErrorDetail, status: number, extractionId?: string) {
     super(detail.message);
     this.name = "SocialRouterError";
     this.code = detail.code;
     this.type = detail.type;
     this.status = status;
+    this.detail = detail;
+    this.extractionId = extractionId;
   }
 }
 
@@ -40,17 +54,22 @@ export class AuthenticationError extends SocialRouterError {
 }
 
 export class InsufficientCreditsError extends SocialRouterError {
-  constructor(detail: ApiErrorDetail) {
-    super(detail, 402);
+  constructor(detail: ApiErrorDetail, extractionId?: string) {
+    super(detail, 402, extractionId);
     this.name = "InsufficientCreditsError";
   }
 }
 
 export class RateLimitError extends SocialRouterError {
+  /**
+   * Seconds to wait before retrying, from the `Retry-After` header. Absent
+   * when the limit is not one that clears by waiting — `credit_limit_exceeded`
+   * is a ceiling set on the API key, and no retry gets past it.
+   */
   public retryAfter?: number;
 
-  constructor(detail: ApiErrorDetail, retryAfter?: number) {
-    super(detail, 429);
+  constructor(detail: ApiErrorDetail, retryAfter?: number, extractionId?: string) {
+    super(detail, 429, extractionId);
     this.name = "RateLimitError";
     this.retryAfter = retryAfter;
   }

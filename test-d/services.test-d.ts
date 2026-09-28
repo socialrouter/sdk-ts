@@ -26,3 +26,18 @@ await sr.run("reddit/post.info", { url: "u", options: { sort: "top" } });
 await sr.run("reddit/post.info", { url: "u", provider: "harshmaur" });
 // @ts-expect-error unknown method on the platform namespace
 await sr.reddit.groupPosts({ url: "u" });
+
+// Required options make `options` required.
+await sr.run("linkedin/job.search", { query: "engineer", options: { location: "Paris" } });
+// @ts-expect-error linkedin/job.search requires options.location
+await sr.run("linkedin/job.search", { query: "engineer" });
+// @ts-expect-error linkedin/job.search requires options.location
+await sr.run("linkedin/job.search", { query: "engineer", options: { country: "FR" } });
+
+// Bring your own key.
+await sr.setByokMode("own_first");
+await sr.setByokMode(null, { source: "apify" });
+// @ts-expect-error null clears a source override, so it needs a source
+await sr.setByokMode(null);
+// @ts-expect-error unknown mode
+await sr.setByokMode("always");

@@ -121,6 +121,25 @@ console.log(usage.total_requests, usage.total_records, usage.total_credits);
 console.log(usage.by_provider); // keyed by offer id, e.g. "apify/harshmaur"
 ```
 
+## Bring your own key
+
+Run on your own provider account instead of SocialRouter credits. The token is checked with the provider before it is stored, and it can never be read back.
+
+```typescript
+await sr.setCredential("apify", "apify_api_...", { label: "prod" });
+await sr.listCredentials();              // [{ source: "apify", status: "active", ... }]
+await sr.renameCredential("apify", null);
+await sr.removeCredential("apify");
+
+// Which account a run is placed on: own_first | platform_first | own_only | platform_only
+await sr.getByokMode();
+await sr.setByokMode("own_first");                    // account default
+await sr.setByokMode("own_only", { source: "apify" }); // one source departs
+await sr.setByokMode(null, { source: "apify" });       // back to the default
+```
+
+Every completed run says who paid in `billed_as` (`"platform"` or `"own"`).
+
 ## Error Handling
 
 ```typescript
@@ -143,10 +162,13 @@ try {
   } else if (err instanceof InsufficientCreditsError) {
     // 402 — not enough credits
   } else if (err instanceof RateLimitError) {
-    // 429 — too many requests
+    // 429 — too many requests. `retryAfter` is in seconds, and undefined
+    // when waiting will not help (a credit limit set on the key).
     console.log(`Retry after ${err.retryAfter} seconds`);
   } else if (err instanceof SocialRouterError) {
     console.error(err.code, err.message, err.status);
+    console.error(err.extractionId); // set when a run failed — its only handle
+    console.error(err.detail);       // full envelope: valid_options, invalid_inputs, provider_detail…
   }
 }
 ```

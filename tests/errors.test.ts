@@ -94,28 +94,56 @@ test("402 becomes an InsufficientCreditsError", async () => {
   );
 });
 
-test("429 becomes a RateLimitError", async () => {
-  stubStatus(429, detail("rate_limited", "rate_limit_error", "Too many requests"), {
-    headers: { "X-RateLimit-Reset": "1786000000" },
+test("429 becomes a RateLimitError, retryAfter in seconds from Retry-After", async () => {
+  stubStatus(429, detail("rate_limited", "rate_limit", "Too many requests"), {
+    headers: { "Retry-After": "42", RateLimit: '"default";r=0;t=42' },
   });
   await assert.rejects(
     () => sr().getBalance(),
     (err: RateLimitError) => {
       assert.ok(err instanceof RateLimitError);
       assert.equal(err.status, 429);
-      // NOTE: the API sends X-RateLimit-Reset as a Unix timestamp in seconds
-      // (api middleware/rate-limit.ts), and the SDK stores it verbatim under a
-      // field named `retryAfter`. This asserts what the code does today, not
-      // what the name promises — a caller doing `retryAfter * 1000` in a
-      // setTimeout waits forever. Fix the semantics (or the name) and this
-      // expectation is the one to change.
-      assert.equal(err.retryAfter, 1786000000);
+      assert.equal(err.retryAfter, 42);
       return true;
     },
   );
 });
 
-test("429 without the reset header leaves retryAfter undefined", async () => {
+test("429 falls back to the RateLimit header's reset when Retry-After is absent", async () => {
+  stubStatus(429, detail("rate_limited", "rate_limit", "Too many requests"), {
+    headers: { RateLimit: '"default";r=0;t=17' },
+  });
+  await assert.rejects(
+    () => sr().getBalance(),
+    (err: RateLimitError) => {
+      assert.equal(err.retryAfter, 17);
+      return true;
+    },
+  );
+});
+
+test("a failed run carries its extraction id and the full error envelope", async () => {
+  stubStatus(502, {
+    error: {
+      code: "provider_credential_rejected",
+      message: "Your apify token was refused.",
+      type: "provider",
+      provider_detail: "User was not found or authentication token is not valid",
+    },
+    extraction_id: "ext_42",
+  });
+  await assert.rejects(
+    () => sr().run("reddit/subreddit.posts", { url: "https://www.reddit.com/r/x" }),
+    (err: SocialRouterError) => {
+      assert.equal(err.status, 502);
+      assert.equal(err.extractionId, "ext_42");
+      assert.equal(err.detail.provider_detail, "User was not found or authentication token is not valid");
+      return true;
+    },
+  );
+});
+
+test("429 without any reset header leaves retryAfter undefined", async () => {
   stubStatus(429, detail("rate_limited", "rate_limit_error", "Too many requests"));
   await assert.rejects(
     () => sr().getBalance(),

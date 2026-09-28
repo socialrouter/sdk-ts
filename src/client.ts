@@ -1,8 +1,12 @@
 import type {
   AccountBalance,
   ApiErrorDetail,
+  ByokMode,
+  ByokModeSettings,
   CatalogueService,
+  CredentialRevocation,
   Extraction,
+  ProviderCredential,
   RunInput,
   SocialRouterConfig,
   SourceClient,
@@ -101,8 +105,9 @@ export class SocialRouter {
    * time. Omit `provider` to let the router pick and fail over; pin an offer
    * id to run that offer alone.
    *
-   * The call is synchronous end-to-end: the returned extraction is already
-   * `completed` or `failed`.
+   * The call is synchronous end-to-end: the returned extraction is
+   * `completed`. A run that fails throws instead — a `SocialRouterError`
+   * whose `extractionId` names the failed run.
    */
   async run<S extends ServiceSlug>(service: S, input: RunInput<S>): Promise<Extraction> {
     const src = input as {
@@ -200,9 +205,76 @@ export class SocialRouter {
     return this.get<AccountBalance>("/v1/account/balance");
   }
 
-  /** Get usage summary */
+  /** Get usage summary over the last `days` days, 1..365. */
   async getUsage(days: number = 30): Promise<UsageSummary> {
     return this.get<UsageSummary>(`/v1/account/usage?days=${days}`);
+  }
+
+  // ─── Bring your own key ──────────────────────────────
+
+  /**
+   * Which provider account runs are placed on: the account default, the
+   * sources that depart from it, and which sources accept a key at all.
+   */
+  async getByokMode(): Promise<ByokModeSettings> {
+    return this.get<ByokModeSettings>("/v1/account/byok-mode");
+  }
+
+  /**
+   * Set the account default — `setByokMode("own_first")` — or scope it to one
+   * source: `setByokMode("own_only", { source: "apify" })`. Pass `null` with
+   * a source to clear its override so it follows the default again.
+   *
+   * Answers with the settings as they now stand.
+   */
+  async setByokMode(mode: ByokMode, opts?: { source?: string }): Promise<ByokModeSettings>;
+  async setByokMode(mode: null, opts: { source: string }): Promise<ByokModeSettings>;
+  async setByokMode(mode: ByokMode | null, opts?: { source?: string }): Promise<ByokModeSettings> {
+    const body: Record<string, unknown> = { byok_mode: mode };
+    if (opts?.source !== undefined) body.source = opts.source;
+    return this.request<ByokModeSettings>("PUT", "/v1/account/byok-mode", body);
+  }
+
+  /** The provider credentials registered on the account. Tokens are never returned. */
+  async listCredentials(): Promise<ProviderCredential[]> {
+    const res = await this.get<{ data: ProviderCredential[] }>("/v1/account/credentials");
+    return res.data;
+  }
+
+  /**
+   * Register or replace the provider token for one source, e.g.
+   * `setCredential("apify", "apify_api_…")`. The API checks the token with
+   * the provider first and stores nothing if it is refused.
+   */
+  async setCredential(
+    source: string,
+    token: string,
+    opts?: { label?: string | null },
+  ): Promise<ProviderCredential> {
+    const body: Record<string, unknown> = { token };
+    if (opts?.label !== undefined) body.label = opts.label;
+    return this.request<ProviderCredential>(
+      "PUT",
+      `/v1/account/credentials/${encodeURIComponent(source)}`,
+      body,
+    );
+  }
+
+  /** Rename a source's credential. `null` clears the label. */
+  async renameCredential(source: string, label: string | null): Promise<ProviderCredential> {
+    return this.request<ProviderCredential>(
+      "PATCH",
+      `/v1/account/credentials/${encodeURIComponent(source)}`,
+      { label },
+    );
+  }
+
+  /** Revoke a source's credential. Runs on that source go back to credits, per the BYOK mode. */
+  async removeCredential(source: string): Promise<CredentialRevocation> {
+    return this.request<CredentialRevocation>(
+      "DELETE",
+      `/v1/account/credentials/${encodeURIComponent(source)}`,
+    );
   }
 
   // ─── HTTP ────────────────────────────────────────────
@@ -226,28 +298,31 @@ export class SocialRouter {
         "User-Agent": `socialrouter-sdk/${SDK_VERSION}`,
         "X-SocialRouter-Client": this.client,
       },
-      ...(body ? { body: JSON.stringify(body) } : {}),
+      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
     });
 
     if (!res.ok) {
-      const json = (await res.json().catch(() => ({}))) as { error?: ApiErrorDetail };
-      const detail: ApiErrorDetail = json.error ?? {
-        code: "unknown",
-        message: res.statusText,
-        type: "unknown",
+      const json = (await res.json().catch(() => ({}))) as {
+        error?: ApiErrorDetail;
+        extraction_id?: string;
       };
+      const detail: ApiErrorDetail =
+        json.error && typeof json.error === "object"
+          ? json.error
+          : { code: "unknown", message: res.statusText, type: "unknown" };
+      // A failed run answers with its id beside the envelope — the caller's
+      // only handle on it.
+      const extractionId = typeof json.extraction_id === "string" ? json.extraction_id : undefined;
 
       switch (res.status) {
         case 401:
           throw new AuthenticationError(detail);
         case 402:
-          throw new InsufficientCreditsError(detail);
-        case 429: {
-          const retryAfter = res.headers.get("X-RateLimit-Reset");
-          throw new RateLimitError(detail, retryAfter ? Number(retryAfter) : undefined);
-        }
+          throw new InsufficientCreditsError(detail, extractionId);
+        case 429:
+          throw new RateLimitError(detail, retryAfterSeconds(res.headers), extractionId);
         default:
-          throw new SocialRouterError(detail, res.status);
+          throw new SocialRouterError(detail, res.status, extractionId);
       }
     }
 
@@ -271,6 +346,22 @@ export class SocialRouter {
 function servicePath(service: string, namespace: Namespace): string {
   if (namespace === "enrich") return `enrich/${encodeURIComponent(subjectOf(service))}`;
   return `${namespace}/${service.split("/").map(encodeURIComponent).join("/")}`;
+}
+
+/**
+ * Seconds until a 429 clears.
+ *
+ * `Retry-After` is what the API sends, as delta-seconds, both for its own
+ * request-volume limit and for an upstream provider limit. The `RateLimit`
+ * header (`"default";r=0;t=42`) carries the same reset as `t`, and is read
+ * only if `Retry-After` is missing. A credit ceiling on the key sends
+ * neither: waiting does not clear it.
+ */
+function retryAfterSeconds(headers: Headers): number | undefined {
+  const retryAfter = headers.get("Retry-After");
+  if (retryAfter !== null && /^\d+$/.test(retryAfter.trim())) return Number(retryAfter);
+  const reset = headers.get("RateLimit")?.match(/(?:^|;)\s*t=(\d+)/);
+  return reset ? Number(reset[1]) : undefined;
 }
 
 function subjectOf(service: string): string {

@@ -179,3 +179,40 @@ test("listServices filters on an entity as readily as on a platform", async () =
   await sr().listServices({ platform: "person" });
   assert.equal(calls[0].url, "/v1/services/person");
 });
+
+// ─── Bring your own key ──────────────────────────────────
+
+test("byok mode is read and written at /v1/account/byok-mode", async () => {
+  await sr().getByokMode();
+  await sr().setByokMode("own_first");
+  await sr().setByokMode("own_only", { source: "apify" });
+  await sr().setByokMode(null, { source: "apify" });
+  assert.deepEqual(
+    calls.map((c) => [c.method, c.url, c.body]),
+    [
+      ["GET", "/v1/account/byok-mode", undefined],
+      ["PUT", "/v1/account/byok-mode", { byok_mode: "own_first" }],
+      ["PUT", "/v1/account/byok-mode", { byok_mode: "own_only", source: "apify" }],
+      // null is sent, not dropped: it is what clears a source override.
+      ["PUT", "/v1/account/byok-mode", { byok_mode: null, source: "apify" }],
+    ],
+  );
+});
+
+test("credentials are addressed by source", async () => {
+  stubFetch(200, { data: [] });
+  assert.deepEqual(await sr().listCredentials(), []);
+  stubFetch();
+  await sr().setCredential("apify", "tok", { label: "prod" });
+  await sr().renameCredential("apify", null);
+  await sr().removeCredential("bright/data");
+  assert.deepEqual(
+    calls.map((c) => [c.method, c.url, c.body]),
+    [
+      ["GET", "/v1/account/credentials", undefined],
+      ["PUT", "/v1/account/credentials/apify", { token: "tok", label: "prod" }],
+      ["PATCH", "/v1/account/credentials/apify", { label: null }],
+      ["DELETE", "/v1/account/credentials/bright%2Fdata", undefined],
+    ],
+  );
+});

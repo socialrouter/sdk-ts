@@ -36,8 +36,30 @@ export type OfferId = `${string}/${string}`;
 
 // ─── Running a service ───────────────────────────────────
 
-/** Fields every run accepts, whatever the service. */
-export interface RunCommon<S extends ServiceSlug = ServiceSlug> {
+/**
+ * The `options` field of a run: optional, unless the service declares an
+ * option it cannot run without (`linkedin/job.search` needs `location`) —
+ * the API answers such a call with `missing_option` before routing, so the
+ * type refuses it first.
+ */
+export type RunOptions<S extends ServiceSlug> = Record<string, never> extends ServiceOptionsMap[S]
+  ? {
+      /**
+       * Typed options declared by the service. Unknown keys are rejected by
+       * the API with a corrective 400 — they are not silently dropped.
+       */
+      options?: ServiceOptionsMap[S];
+    }
+  : {
+      /**
+       * Typed options declared by the service. At least one is required
+       * here. Unknown keys are rejected by the API with a corrective 400.
+       */
+      options: ServiceOptionsMap[S];
+    };
+
+/** Fields every run accepts, whatever the service, `options` aside. */
+export interface RunBase {
   /**
    * Pin one offer, e.g. `"apify/harshmaur"`. Omit it — the default — to let
    * the router pick and fail over across the whole chain. Pinning disables
@@ -46,12 +68,10 @@ export interface RunCommon<S extends ServiceSlug = ServiceSlug> {
   provider?: OfferId;
   /** Max records to return, 1..250. Defaults to 100. */
   limit?: number;
-  /**
-   * Typed options declared by the service. Unknown keys are rejected by the
-   * API with a corrective 400 — they are not silently dropped.
-   */
-  options?: ServiceOptionsMap[S];
 }
+
+/** Fields every run accepts, `options` typed for the service. */
+export type RunCommon<S extends ServiceSlug = ServiceSlug> = RunBase & RunOptions<S>;
 
 /** Inputs of a url-kind service. Pass `url` or `urls`, not both. */
 export interface UrlInput {
@@ -123,7 +143,8 @@ export interface Extraction {
    * your account, invoiced to you by the provider directly).
    *
    * A failover chain can mix the two, so `served_by` alone does not answer
-   * it. Present on every completed run.
+   * it. Present on every completed run returned by `run()`; not returned by
+   * `getExtraction()`.
    */
   billed_as?: "platform" | "own";
   credits_used: number;
@@ -148,6 +169,12 @@ export interface InputFormat {
   /** Validation regex source — informational; the API validates. */
   pattern?: string;
   note?: string;
+  /**
+   * Offers that accept this shape, e.g. `["apify/apimaestro"]`. Absent means
+   * every offer of the service does. Pinning an offer outside this list for
+   * an input of this shape is refused with `offer_cannot_serve_input`.
+   */
+  offers?: string[];
 }
 
 /** One typed option a service accepts. */
@@ -160,6 +187,20 @@ export interface ServiceOption {
   format?: string;
   description: string;
   default?: string | number | boolean;
+  /**
+   * The call cannot run without this option. The API answers a call that
+   * omits it with `missing_option`.
+   */
+  required?: boolean;
+  /** A concrete valid value, published for required options. */
+  example?: string | number | boolean;
+  /**
+   * Offers that implement this option, e.g. `["apify/harshmaur"]`. Absent
+   * means every offer of the service honours it. The others ignore it, and
+   * pinning one of them with this option set is refused with
+   * `option_not_supported_by_offer`.
+   */
+  offers?: string[];
 }
 
 /** One offer of a service, customer-facing. */
@@ -223,6 +264,7 @@ export interface AccountBalance {
 }
 
 export interface UsageSummary {
+  /** The window, e.g. `"30d"`. */
   period: string;
   total_requests: number;
   total_records: number;
@@ -232,10 +274,93 @@ export interface UsageSummary {
   by_platform: Record<string, { requests: number; records: number; credits: number }>;
 }
 
+/**
+ * The `error` envelope of every failing response.
+ *
+ * `code`, `message` and `type` are always there. Validation errors add the
+ * fields that make them correctable — `valid_options`, `allowed_values`,
+ * `invalid_inputs`, `available_offers`, `did_you_mean`… — and a run placed on
+ * your own provider key adds `provider_detail`, the provider's own wording.
+ */
 export interface ApiErrorDetail {
   code: string;
   message: string;
+  /**
+   * Class of failure: `validation`, `auth`, `billing`, `rate_limit`,
+   * `not_found`, `routing`, `timeout`, `provider`, `api_error`, `internal`,
+   * `server`.
+   */
   type: string;
+  /** The provider's own error message, on a run placed on your own key. */
+  provider_detail?: string;
+  /** The option a validation error is about. */
+  option?: string;
+  /** Valid option names, on `unknown_option`. */
+  valid_options?: string[];
+  /** Valid values, on `invalid_option` and `invalid_byok_mode`. */
+  allowed_values?: string[];
+  /** The inputs that failed, on `invalid_input_format` and `offer_cannot_serve_input`. */
+  invalid_inputs?: string[];
+  /** Offers that would accept the call, on option/input-by-offer errors. */
+  offers_supporting?: string[];
+  /** Offers serving the service, on `unknown_offer`. */
+  available_offers?: string[];
+  /** Closest valid slug, on `unknown_service`. */
+  did_you_mean?: string;
+  /** Sources a credential can be registered for, on `unknown_source`. */
+  valid_sources?: string[];
+  /** Sources open to bring-your-own-key, on `source_not_byok_enabled`. */
+  byok_sources?: string[];
+  [key: string]: unknown;
+}
+
+// ─── Bring your own key ──────────────────────────────────
+
+/**
+ * Which provider account a run is placed on when both could serve it:
+ * `own_first` (your key, else SocialRouter credits), `platform_first`,
+ * `own_only` (never spend credits), `platform_only` (never use your key).
+ */
+export type ByokMode = "own_first" | "platform_first" | "own_only" | "platform_only";
+
+/** The account's billing preferences, as `GET /v1/account/byok-mode`. */
+export interface ByokModeSettings {
+  /** The account default. */
+  byok_mode: ByokMode;
+  /**
+   * Sources that depart from the default, keyed by source id. A source
+   * absent here follows `byok_mode`.
+   */
+  source_modes: Record<string, ByokMode>;
+  /** Every mode the API accepts. */
+  available_modes: ByokMode[];
+  /** Sources a provider key can be registered for. */
+  byok_sources: string[];
+  /** Sources SocialRouter holds no account for: reachable only with your key. */
+  byok_only_sources: string[];
+}
+
+/**
+ * A provider credential registered on the account. The token itself is
+ * write-only and never returned, in whole or in part.
+ */
+export interface ProviderCredential {
+  id: string;
+  /** Source id, the first half of an offer id: `"apify"`, `"brightdata"`. */
+  source: string;
+  label: string | null;
+  /** `invalid` once the provider has refused it during a run. */
+  status: "active" | "invalid";
+  last_verified_at: string | null;
+  last_used_at: string | null;
+  created_at: string;
+}
+
+/** What `DELETE /v1/account/credentials/{source}` answers. */
+export interface CredentialRevocation {
+  revoked: true;
+  source: string;
+  id: string;
 }
 
 /**

@@ -21,7 +21,9 @@ export type {
   SocialRouterConfig,
   SourceClient,
   RunInput,
+  RunBase,
   RunCommon,
+  RunOptions,
   UrlInput,
   QueryInput,
   IdentifierInput,
@@ -46,4 +48,8 @@ export type {
   AccountBalance,
   UsageSummary,
   ApiErrorDetail,
+  ByokMode,
+  ByokModeSettings,
+  ProviderCredential,
+  CredentialRevocation,
 } from "./types.js";

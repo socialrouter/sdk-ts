@@ -376,7 +376,7 @@ export const SERVICE_METHODS = {
 
 /** Options accepted by `apollo/company.search`. */
 export interface ApolloCompanySearchOptions {
-  /** What the query matches: the company's industry/keyword tags (default, e.g. "fintech"), or its name. */
+  /** What the query matches: the company's industry/keyword tags (default, e.g. "fintech"), or its name. Only honoured by: apollo/company, apollo/apollo. */
   match?: "keywords" | "name";
   /** Comma-separated headquarters locations. */
   locations?: string;
@@ -394,7 +394,7 @@ export interface ApolloCompanySearchOptions {
 
 /** Options accepted by `apollo/profile.info`. */
 export interface ApolloProfileInfoOptions {
-  /** Also return personal email addresses. Consumes extra credits on your own provider account. Default: false. */
+  /** Also return personal email addresses. Consumes extra credits on your own provider account. Default: false. Only honoured by: apollo/person, apollo/apollo. */
   revealPersonalEmails?: boolean;
 }
 
@@ -414,9 +414,9 @@ export interface ApolloProfileSearchOptions {
   employeeRange?: string;
   /** Only people whose work email has this status. */
   emailStatus?: "verified" | "unverified" | "likely_to_engage" | "unavailable";
-  /** Resolve each hit into a full profile, which is the only way to obtain a LinkedIn URL and an unmasked name. Consumes 1 credit per person matched on your own provider account. Set false for a credit-free preview: masked last names, no LinkedIn URL, is_obfuscated: true on every record. Default: true. */
+  /** Resolve each hit into a full profile, which is the only way to obtain a LinkedIn URL and an unmasked name. Consumes 1 credit per person matched on your own provider account. Set false for a credit-free preview: masked last names, no LinkedIn URL, is_obfuscated: true on every record. Default: true. Only honoured by: apollo/person, apollo/apollo. */
   enrich?: boolean;
-  /** Also return personal email addresses. Consumes extra credits on your own provider account. Default: false. */
+  /** Also return personal email addresses. Consumes extra credits on your own provider account. Default: false. Only honoured by: apollo/person, apollo/apollo. */
   revealPersonalEmails?: boolean;
 }
 
@@ -456,8 +456,8 @@ export interface InstagramProfileReelsOptions {
 
 /** Options accepted by `linkedin/job.search`. */
 export interface LinkedinJobSearchOptions {
-  /** Where to search, as LinkedIn spells it: a city, region or country, e.g. "Paris", "Greater London", "United States". LinkedIn scopes a job search to a place, so a keyword on its own is not a search. */
-  location?: string;
+  /** Where to search, as LinkedIn spells it: a city, region or country, e.g. "Paris", "Greater London", "United States". LinkedIn scopes a job search to a place, so a keyword on its own is not a search. Required. Example: "Paris". */
+  location: string;
   /** Two-letter country code narrowing the location, e.g. "FR", "US". Format: ISO 3166-1 alpha-2. */
   country?: string;
   /** Only return listings posted within this window. */
@@ -478,19 +478,19 @@ export interface LinkedinJobSearchOptions {
 
 /** Options accepted by `linkedin/post.comments`. */
 export interface LinkedinPostCommentsOptions {
-  /** Only return comments posted within this window. */
+  /** Only return comments posted within this window. Only honoured by: apify/harvestapi. */
   postedLimit?: "any" | "24h" | "week" | "month" | "3months" | "6months" | "year";
 }
 
 /** Options accepted by `linkedin/profile.info`. */
 export interface LinkedinProfileInfoOptions {
-  /** Include the public email lookup. Default: true. */
+  /** Include the public email lookup. Default: true. Only honoured by: apify/apimaestro. */
   includeEmail?: boolean;
 }
 
 /** Options accepted by `person/info`. */
 export interface PersonInfoOptions {
-  /** Also return personal email addresses. Consumes extra credits on your own provider account. Default: false. */
+  /** Also return personal email addresses. Consumes extra credits on your own provider account. Default: false. Only honoured by: apollo/person, apollo/apollo. */
   revealPersonalEmails?: boolean;
 }
 
@@ -500,9 +500,9 @@ export interface RedditSubredditPostsOptions {
   sort?: "hot" | "new" | "top" | "rising";
   /** Time window, applied when sort is "top". */
   time?: "hour" | "day" | "week" | "month" | "year" | "all";
-  /** Only posts created on/after this UTC date. Format: YYYY-MM-DD. */
+  /** Only posts created on/after this UTC date. Format: YYYY-MM-DD. Only honoured by: apify/harshmaur, apify/trudax. */
   postedAfter?: string;
-  /** Only posts created before this UTC date. Format: YYYY-MM-DD. */
+  /** Only posts created before this UTC date. Format: YYYY-MM-DD. Only honoured by: apify/harshmaur. */
   postedBefore?: string;
 }
 
@@ -566,13 +566,13 @@ export interface YoutubeHashtagVideosOptions {
 
 /** Options accepted by `youtube/video.info`. */
 export interface YoutubeVideoInfoOptions {
-  /** Also fetch the video's subtitles. Default: false. */
+  /** Also fetch the video's subtitles. Default: false. Only honoured by: apify/streamers. */
   downloadSubtitles?: boolean;
-  /** Subtitle language code, e.g. "en". */
+  /** Subtitle language code, e.g. "en". Only honoured by: apify/streamers. */
   subtitlesLanguage?: string;
-  /** Prefer auto-generated subtitles over uploaded ones. */
+  /** Prefer auto-generated subtitles over uploaded ones. Only honoured by: apify/streamers. */
   preferAutoGeneratedSubtitles?: boolean;
-  /** Subtitle format (e.g. srt, vtt). */
+  /** Subtitle format (e.g. srt, vtt). Only honoured by: apify/streamers. */
   subtitlesFormat?: string;
 }
 
@@ -612,6 +612,7 @@ export interface YoutubeVideoSearchOptions {
  * Options type per service. Services that declare none map to an empty
  * object — passing any key is a compile error, matching the API, which
  * rejects unknown options with a corrective 400 rather than ignoring them.
+ * A service with a required option makes `options` itself required.
  */
 export interface ServiceOptionsMap {
   "apollo/company.info": Record<string, never>;

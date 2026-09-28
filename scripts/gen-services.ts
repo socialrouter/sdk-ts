@@ -35,6 +35,9 @@ interface CatalogueOption {
   format?: string;
   default?: unknown;
   description: string;
+  required?: boolean;
+  example?: unknown;
+  offers?: string[];
 }
 
 interface CatalogueService {
@@ -98,8 +101,14 @@ function tsType(opt: CatalogueOption): string {
 
 function jsdoc(opt: CatalogueOption, indent: string): string {
   const bits = [opt.description];
+  if (opt.required) bits.push("Required.");
   if (opt.format) bits.push(`Format: ${opt.format}.`);
   if (opt.default !== undefined) bits.push(`Default: ${JSON.stringify(opt.default)}.`);
+  if (opt.example !== undefined) bits.push(`Example: ${JSON.stringify(opt.example)}.`);
+  // An option only some offers implement is ignored by the others, and a
+  // pinned offer outside this list is refused with a 400 — worth knowing
+  // from the editor, before the call.
+  if (opt.offers?.length) bits.push(`Only honoured by: ${opt.offers.join(", ")}.`);
   return `${indent}/** ${bits.join(" ")} */`;
 }
 
@@ -258,7 +267,9 @@ for (const e of entries) {
   push(`export interface ${e.optionsType} {`);
   for (const opt of e.options) {
     push(jsdoc(opt, "  "));
-    push(`  ${opt.name}?: ${tsType(opt)};`);
+    // A required option is required in the type too: the API answers a
+    // call without it with `missing_option`, before any routing.
+    push(`  ${opt.name}${opt.required ? "" : "?"}: ${tsType(opt)};`);
   }
   push("}");
   push("");
@@ -268,6 +279,7 @@ push("/**");
 push(" * Options type per service. Services that declare none map to an empty");
 push(" * object — passing any key is a compile error, matching the API, which");
 push(" * rejects unknown options with a corrective 400 rather than ignoring them.");
+push(" * A service with a required option makes `options` itself required.");
 push(" */");
 push("export interface ServiceOptionsMap {");
 for (const e of entries) {
