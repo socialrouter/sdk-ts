@@ -366,11 +366,12 @@ export interface CredentialRevocation {
 /**
  * Which SocialRouter surface issued the request. Sent on every call via the
  * `X-SocialRouter-Client` header so the API can attribute usage per channel.
- * Wrappers set this explicitly (CLI → "cli", MCP → "mcp"); a bare SDK caller
- * defaults to "sdk". A raw HTTP caller sends no header and the API records it
- * as "api".
+ * Wrappers set this explicitly (CLI → "cli", the stdio MCP server → "mcp",
+ * the hosted MCP endpoint → "mcp_remote"); a bare SDK caller defaults to
+ * "sdk". A raw HTTP caller sends no header and the API records it as "api".
+ * Any other value is recorded as "api" too.
  */
-export type SourceClient = "sdk" | "cli" | "mcp" | "playground";
+export type SourceClient = "sdk" | "cli" | "mcp" | "mcp_remote" | "playground";
 
 export interface SocialRouterConfig {
   apiKey: string;

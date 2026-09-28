@@ -41,3 +41,6 @@ await sr.setByokMode(null, { source: "apify" });
 await sr.setByokMode(null);
 // @ts-expect-error unknown mode
 await sr.setByokMode("always");
+
+// Every channel the API attributes is a valid client tag.
+new SocialRouter({ apiKey: "k", client: "mcp_remote" });
