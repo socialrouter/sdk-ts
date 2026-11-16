@@ -46,6 +46,7 @@ export const PLATFORM_SERVICES = {
   ],
   linkedin: [
     "company.info",
+    "company.search",
     "job.info",
     "job.search",
     "post.comments",
@@ -170,6 +171,7 @@ export const SERVICE_NAMESPACE = {
   "instagram/profile.search": "extract",
   "instagram/reel.info": "extract",
   "linkedin/company.info": "extract",
+  "linkedin/company.search": "extract",
   "linkedin/job.info": "extract",
   "linkedin/job.search": "extract",
   "linkedin/post.comments": "extract",
@@ -238,6 +240,7 @@ export const SERVICE_INPUT_KIND = {
   "instagram/profile.search": "query",
   "instagram/reel.info": "url",
   "linkedin/company.info": "url",
+  "linkedin/company.search": "query",
   "linkedin/job.info": "url",
   "linkedin/job.search": "query",
   "linkedin/post.comments": "url",
@@ -322,6 +325,7 @@ export const SERVICE_METHODS = {
   },
   linkedin: {
     companyInfo: "company.info",
+    companySearch: "company.search",
     jobInfo: "job.info",
     jobSearch: "job.search",
     postComments: "post.comments",
@@ -454,6 +458,18 @@ export interface InstagramProfileReelsOptions {
   onlyPostsNewerThan?: string;
 }
 
+/** Options accepted by `linkedin/company.search`. */
+export interface LinkedinCompanySearchOptions {
+  /** Result page to read (up to 50 companies per page). Default: 1. Only honoured by: apify/apimaestro. */
+  page?: number;
+  /** Comma-separated LinkedIn geo ids to restrict the search to, e.g. "103644278,106693272". Only honoured by: apify/apimaestro. */
+  locationIds?: string;
+  /** Comma-separated LinkedIn industry ids, e.g. "6,4". Only honoured by: apify/apimaestro. */
+  industryIds?: string;
+  /** Comma-separated headcount buckets: 1-10, 11-50, 51-200, 201-500, 501-1000, 1001-5000, 5001-10,000, 10,001+. Only honoured by: apify/apimaestro. */
+  companySizes?: string;
+}
+
 /** Options accepted by `linkedin/job.search`. */
 export interface LinkedinJobSearchOptions {
   /** Where to search, as LinkedIn spells it: a city, region or country, e.g. "Paris", "Greater London", "United States". LinkedIn scopes a job search to a place, so a keyword on its own is not a search. Required. Example: "Paris". */
@@ -516,9 +532,9 @@ export interface TiktokProfileVideosOptions {
 
 /** Options accepted by `tiktok/video.search`. */
 export interface TiktokVideoSearchOptions {
-  /** Two-letter country code for the location the search runs from, e.g. "FR". TikTok tailors search results to the viewer, so this is what scopes a query to one market. Format: ISO 3166-1 alpha-2. */
+  /** Two-letter country code for the location the search runs from, e.g. "FR". TikTok tailors search results to the viewer, so this is what scopes a query to one market. Format: ISO 3166-1 alpha-2. Only honoured by: brightdata/tiktok. */
   country?: string;
-  /** Comma-separated post ids to skip. Feed back the ids already collected so a repeated search is not billed for the same videos twice. */
+  /** Comma-separated post ids to skip. Feed back the ids already collected so a repeated search is not billed for the same videos twice. Only honoured by: brightdata/tiktok. */
   postsToNotInclude?: string;
 }
 
@@ -643,6 +659,7 @@ export interface ServiceOptionsMap {
   "instagram/profile.search": Record<string, never>;
   "instagram/reel.info": Record<string, never>;
   "linkedin/company.info": Record<string, never>;
+  "linkedin/company.search": LinkedinCompanySearchOptions;
   "linkedin/job.info": Record<string, never>;
   "linkedin/job.search": LinkedinJobSearchOptions;
   "linkedin/post.comments": LinkedinPostCommentsOptions;
