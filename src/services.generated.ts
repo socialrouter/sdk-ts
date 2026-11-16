@@ -45,6 +45,7 @@ export const PLATFORM_SERVICES = {
     "reel.info",
   ],
   linkedin: [
+    "company.employees",
     "company.info",
     "company.search",
     "job.info",
@@ -170,6 +171,7 @@ export const SERVICE_NAMESPACE = {
   "instagram/profile.reels": "extract",
   "instagram/profile.search": "extract",
   "instagram/reel.info": "extract",
+  "linkedin/company.employees": "extract",
   "linkedin/company.info": "extract",
   "linkedin/company.search": "extract",
   "linkedin/job.info": "extract",
@@ -239,6 +241,7 @@ export const SERVICE_INPUT_KIND = {
   "instagram/profile.reels": "url",
   "instagram/profile.search": "query",
   "instagram/reel.info": "url",
+  "linkedin/company.employees": "url",
   "linkedin/company.info": "url",
   "linkedin/company.search": "query",
   "linkedin/job.info": "url",
@@ -324,6 +327,7 @@ export const SERVICE_METHODS = {
     reelInfo: "reel.info",
   },
   linkedin: {
+    companyEmployees: "company.employees",
     companyInfo: "company.info",
     companySearch: "company.search",
     jobInfo: "job.info",
@@ -456,6 +460,22 @@ export interface InstagramProfilePostsOptions {
 export interface InstagramProfileReelsOptions {
   /** Only return posts published on or after this UTC date. A relative value works too — "1 day", "2 months", "3 years". Format: YYYY-MM-DD. */
   onlyPostsNewerThan?: string;
+}
+
+/** Options accepted by `linkedin/company.employees`. */
+export interface LinkedinCompanyEmployeesOptions {
+  /** Free-text query matched against employee profiles (300 characters max). Only honoured by: apify/harvestapi. */
+  searchQuery?: string;
+  /** Comma-separated current job titles to keep, e.g. "Software Engineer,Product Manager". Only honoured by: apify/harvestapi. */
+  jobTitles?: string;
+  /** Comma-separated past job titles to keep, e.g. "Software Engineer". Only honoured by: apify/harvestapi. */
+  pastJobTitles?: string;
+  /** Comma-separated LinkedIn locations, e.g. "San Francisco,Paris". Use full names: "UK" resolves to Ukraine, "United Kingdom" to the UK. Only honoured by: apify/harvestapi. */
+  locations?: string;
+  /** Comma-separated schools attended, e.g. "Stanford University". Only honoured by: apify/harvestapi. */
+  schools?: string;
+  /** Comma-separated seniority ids: 100 In Training, 110 Entry Level, 120 Senior, 130 Strategic, 200 Entry Level Manager, 210 Experienced Manager, 220 Director, 300 Vice President, 310 CXO, 320 Owner / Partner. Only honoured by: apify/harvestapi. */
+  seniorityLevelIds?: string;
 }
 
 /** Options accepted by `linkedin/company.search`. */
@@ -658,6 +678,7 @@ export interface ServiceOptionsMap {
   "instagram/profile.reels": InstagramProfileReelsOptions;
   "instagram/profile.search": Record<string, never>;
   "instagram/reel.info": Record<string, never>;
+  "linkedin/company.employees": LinkedinCompanyEmployeesOptions;
   "linkedin/company.info": Record<string, never>;
   "linkedin/company.search": LinkedinCompanySearchOptions;
   "linkedin/job.info": Record<string, never>;
