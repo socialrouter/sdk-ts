@@ -1,0 +1,86 @@
+name: Sync services
+
+# Regenerates src/services.generated.ts from the live catalogue (GET /v1/services)
+# and opens a PR when the service vocabulary moved. No version bump and no
+# npm publish: a human merges the PR and tags the release.
+#
+# Triggered by the API repo right after a successful deploy (repository_dispatch),
+# so the catalogue it reads is already the new one. Can also be run by hand.
+
+on:
+  repository_dispatch:
+    types: [api-deployed]
+  workflow_dispatch:
+
+# One sync at a time; a newer run supersedes a queued one.
+concurrency:
+  group: sync-services
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  BRANCH: chore/sync-services
+
+jobs:
+  sync:
+    name: Regenerate and open PR
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Regenerate services
+        run: npm run gen:services
+
+      - name: Detect changes
+        id: diff
+        run: |
+          if git diff --quiet -- src/services.generated.ts; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Catalogue unchanged — nothing to do."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Typecheck and test the regenerated file
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          npm run typecheck
+          npm run test:unit
+
+      - name: Push branch and open PR
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$BRANCH"
+          git add src/services.generated.ts
+          git commit -m "chore: sync services from the live catalogue"
+          git push --force origin "$BRANCH"
+
+          # A previous run may have left the PR open; the force-push above
+          # already updated it.
+          if [ -n "$(gh pr list --head "$BRANCH" --state open --json number --jq '.[].number')" ]; then
+            echo "PR already open — branch updated."
+            exit 0
+          fi
+
+          gh pr create \
+            --base main \
+            --head "$BRANCH" \
+            --title "chore: sync services from the live catalogue" \
+            --body "Regenerated \`src/services.generated.ts\` from \`GET /v1/services\` after an API deploy. The service vocabulary changed. No version bump, no publish — merge, then bump and tag when ready."

@@ -1,0 +1,68 @@
+name: Release
+
+# When the sync-services PR is merged: bump the minor version, tag it and
+# publish. Nothing else triggers a release — a hand-made release still goes
+# through the tag push straight to publish.yml.
+#
+# Pushes made with GITHUB_TOKEN do not start other workflows, so the tag push
+# alone would never reach publish.yml. This workflow therefore dispatches
+# publish.yml itself on the new tag (workflow_dispatch is exempt from that
+# rule). The publish still runs from publish.yml, which is the workflow npm
+# Trusted Publishing is configured for.
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  release:
+    name: Bump, tag and publish
+    # Only the bot's own sync PR, merged, from this repo (never a fork).
+    if: >-
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.head.ref == 'chore/sync-services' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Bump version
+        id: bump
+        run: |
+          npm version minor --no-git-tag-version
+          version="$(node -p "require('./package.json').version")"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Commit, tag and push
+        env:
+          VERSION: ${{ steps.bump.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json
+          git commit -m "$VERSION"
+          git tag "v$VERSION"
+          git push origin main "v$VERSION"
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.bump.outputs.version }}
+        run: gh workflow run publish.yml --ref "v$VERSION"
