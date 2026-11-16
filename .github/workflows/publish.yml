@@ -62,3 +62,26 @@ jobs:
         env:
           # `prepublishOnly` re-runs `npm test`; give it the same key.
           SOCIALROUTER_API_KEY: ${{ secrets.SOCIALROUTER_API_KEY }}
+
+      # Tell the downstream packages a new SDK is on npm. Only after the publish
+      # succeeded, so they never chase a version that failed to ship. Each one
+      # bumps its @socialrouter/sdk range, tests, releases and publishes itself
+      # (sdk-bump.yml). Skipped for a manual run that is not on a tag, and
+      # guarded on the secret: a missing token must not fail a publish that
+      # already went out.
+      - name: Trigger mcp and cli
+        if: ${{ success() && startsWith(github.ref, 'refs/tags/') }}
+        env:
+          GH_TOKEN: ${{ secrets.DOWNSTREAM_DISPATCH_TOKEN }}
+        run: |
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "::warning::DOWNSTREAM_DISPATCH_TOKEN is not set — mcp and cli not notified."
+            exit 0
+          fi
+          version="$(node -p "require('./package.json').version")"
+          for repo in mcp cli; do
+            gh api "repos/socialrouter/$repo/dispatches" \
+              -f event_type=sdk-published \
+              -f "client_payload[version]=$version"
+          done
+
