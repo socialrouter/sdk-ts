@@ -56,7 +56,9 @@ jobs:
 
       - name: Typecheck and test the regenerated file
         if: steps.diff.outputs.changed == 'true'
+        # Typecheck and tests both import the built dist/, so build first.
         run: |
+          npm run build
           npm run typecheck
           npm run test:unit
 
