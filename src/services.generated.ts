@@ -47,6 +47,7 @@ export const PLATFORM_SERVICES = {
   linkedin: [
     "company.employees",
     "company.info",
+    "company.posts",
     "company.search",
     "job.info",
     "job.search",
@@ -173,6 +174,7 @@ export const SERVICE_NAMESPACE = {
   "instagram/reel.info": "extract",
   "linkedin/company.employees": "extract",
   "linkedin/company.info": "extract",
+  "linkedin/company.posts": "extract",
   "linkedin/company.search": "extract",
   "linkedin/job.info": "extract",
   "linkedin/job.search": "extract",
@@ -243,6 +245,7 @@ export const SERVICE_INPUT_KIND = {
   "instagram/reel.info": "url",
   "linkedin/company.employees": "url",
   "linkedin/company.info": "url",
+  "linkedin/company.posts": "url",
   "linkedin/company.search": "query",
   "linkedin/job.info": "url",
   "linkedin/job.search": "query",
@@ -329,6 +332,7 @@ export const SERVICE_METHODS = {
   linkedin: {
     companyEmployees: "company.employees",
     companyInfo: "company.info",
+    companyPosts: "company.posts",
     companySearch: "company.search",
     jobInfo: "job.info",
     jobSearch: "job.search",
@@ -478,6 +482,24 @@ export interface LinkedinCompanyEmployeesOptions {
   seniorityLevelIds?: string;
 }
 
+/** Options accepted by `linkedin/company.posts`. */
+export interface LinkedinCompanyPostsOptions {
+  /** Only return posts no older than this window. Only honoured by: apify/harvestapi. */
+  postedLimit?: "any" | "1h" | "24h" | "week" | "month" | "3months" | "6months" | "year";
+  /** Only return posts from now back to and including this date. Format: YYYY-MM-DD. Only honoured by: apify/harvestapi. */
+  postedLimitDate?: string;
+  /** Include quote posts (shared posts with a comment). Default: true. Only honoured by: apify/harvestapi. */
+  includeQuotePosts?: boolean;
+  /** Include reposts (shared posts without a comment). Default: true. Only honoured by: apify/harvestapi. */
+  includeReposts?: boolean;
+  /** Country context LinkedIn is queried from; it can change what is shown. Only honoured by: apify/harvestapi. */
+  contextCountry?: "any" | "US" | "GB" | "DE" | "FR";
+  /** Only return posts published on or after this date. Format: YYYY-MM-DD. Only honoured by: brightdata/linkedin. */
+  startDate?: string;
+  /** Only return posts published on or before this date. Format: YYYY-MM-DD. Only honoured by: brightdata/linkedin. */
+  endDate?: string;
+}
+
 /** Options accepted by `linkedin/company.search`. */
 export interface LinkedinCompanySearchOptions {
   /** Result page to read (up to 50 companies per page). Default: 1. Only honoured by: apify/apimaestro. */
@@ -522,6 +544,26 @@ export interface LinkedinPostCommentsOptions {
 export interface LinkedinProfileInfoOptions {
   /** Include the public email lookup. Default: true. Only honoured by: apify/apimaestro. */
   includeEmail?: boolean;
+}
+
+/** Options accepted by `linkedin/profile.posts`. */
+export interface LinkedinProfilePostsOptions {
+  /** Only return posts no older than this window. Only honoured by: apify/harvestapi. */
+  postedLimit?: "any" | "1h" | "24h" | "week" | "month" | "3months" | "6months" | "year";
+  /** Only return posts from now back to and including this date. Format: YYYY-MM-DD. Only honoured by: apify/harvestapi. */
+  postedLimitDate?: string;
+  /** Include quote posts (shared posts with a comment). Default: true. Only honoured by: apify/harvestapi. */
+  includeQuotePosts?: boolean;
+  /** Include reposts (shared posts without a comment). Default: true. Only honoured by: apify/harvestapi. */
+  includeReposts?: boolean;
+  /** Country context LinkedIn is queried from; it can change what is shown. Only honoured by: apify/harvestapi. */
+  contextCountry?: "any" | "US" | "GB" | "DE" | "FR";
+  /** Only return posts published on or after this date. Format: YYYY-MM-DD. Only honoured by: brightdata/linkedin. */
+  startDate?: string;
+  /** Only return posts published on or before this date. Format: YYYY-MM-DD. Only honoured by: brightdata/linkedin. */
+  endDate?: string;
+  /** Only the posts the profile wrote. Set false to also get what it interacted with (likes, comments). Default: true. Only honoured by: brightdata/linkedin. */
+  onlyAuthoredPosts?: boolean;
 }
 
 /** Options accepted by `person/info`. */
@@ -680,6 +722,7 @@ export interface ServiceOptionsMap {
   "instagram/reel.info": Record<string, never>;
   "linkedin/company.employees": LinkedinCompanyEmployeesOptions;
   "linkedin/company.info": Record<string, never>;
+  "linkedin/company.posts": LinkedinCompanyPostsOptions;
   "linkedin/company.search": LinkedinCompanySearchOptions;
   "linkedin/job.info": Record<string, never>;
   "linkedin/job.search": LinkedinJobSearchOptions;
@@ -688,7 +731,7 @@ export interface ServiceOptionsMap {
   "linkedin/post.likes": Record<string, never>;
   "linkedin/post.search": Record<string, never>;
   "linkedin/profile.info": LinkedinProfileInfoOptions;
-  "linkedin/profile.posts": Record<string, never>;
+  "linkedin/profile.posts": LinkedinProfilePostsOptions;
   "linkedin/profile.search": Record<string, never>;
   "person/info": PersonInfoOptions;
   "pinterest/pin.info": Record<string, never>;
