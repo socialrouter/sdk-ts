@@ -468,7 +468,7 @@ export interface InstagramProfileReelsOptions {
 
 /** Options accepted by `linkedin/company.employees`. */
 export interface LinkedinCompanyEmployeesOptions {
-  /** Free-text query matched against employee profiles (300 characters max). Only honoured by: apify/harvestapi. */
+  /** Fuzzy free-text search over the company's employees, as you would type it in LinkedIn's people search: a role (e.g. "Marketing Manager"), a name (e.g. "John Doe") or a keyword, 300 characters max. It is one search string, not a list: the provider does not document a comma as a separator. To match several terms use LinkedIn's Boolean operators (`OR`, `AND`, `NOT`, quotes for an exact phrase), e.g. "Founder OR CTO". For a strict list of titles use `jobTitles` instead, which is a comma-separated list applied as a strict filter. Only honoured by: apify/harvestapi. */
   searchQuery?: string;
   /** Comma-separated current job titles to keep, e.g. "Software Engineer,Product Manager". Only honoured by: apify/harvestapi. */
   jobTitles?: string;
@@ -526,7 +526,7 @@ export interface LinkedinJobSearchOptions {
   experienceLevel?: "Internship" | "Entry level" | "Associate" | "Mid-Senior level" | "Director" | "Executive";
   /** Work arrangement. */
   remote?: "Remote" | "On-site" | "Hybrid";
-  /** Only return listings from this company. */
+  /** Only return listings from this company. Pass the company name as LinkedIn displays it, e.g. "Microsoft". A LinkedIn company URL is rejected with a 400 before anything is billed, and a numeric company ID matches nothing (empty result, not an error). Applies to every keyword of the request. */
   company?: string;
   /** How far around `location` to search, in LinkedIn's own units, e.g. "25 mi". */
   locationRadius?: string;
